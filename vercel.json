@@ -4,10 +4,11 @@
   "installCommand": "echo 'No packages to install'",
   "outputDirectory": "public",
   "functions": {
-    "api/review.py": { "maxDuration": 300 },
-    "api/extract.py": { "maxDuration": 300 },
-    "api/intake.py": { "maxDuration": 60, "includeFiles": "dataset/**" },
-    "api/data.js": { "maxDuration": 30 },
-    "api/action.js": { "maxDuration": 30 }
+    "api/data.js": {
+      "maxDuration": 30
+    },
+    "api/action.js": {
+      "maxDuration": 30
+    }
   }
 }

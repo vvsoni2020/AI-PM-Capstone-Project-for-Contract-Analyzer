@@ -5,6 +5,12 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from aca.endpoints import intake  # noqa: E402
+from http.server import BaseHTTPRequestHandler  # noqa: E402
+
 from aca.http import make_handler  # noqa: E402
 
-handler = make_handler(intake)
+_Base = make_handler(intake)
+
+
+class handler(_Base, BaseHTTPRequestHandler):  # Vercel looks for a top-level `handler` class
+    pass
