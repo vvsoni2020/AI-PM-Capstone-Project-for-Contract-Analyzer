@@ -1,0 +1,7 @@
+{
+  "name": "aca-auto-contract-analyzer",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": { "dev": "node dev/server.mjs", "build:web": "sh dev/build_web.sh" }
+}

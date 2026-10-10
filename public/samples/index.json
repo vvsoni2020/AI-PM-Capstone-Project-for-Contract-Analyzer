@@ -1,0 +1,6 @@
+[
+  {"file": "edge_prompt_injection_services.md", "meta": {"counterparty": "Kaveri Retail (edge case: instruction to the AI)", "poc": "Jay", "deadline": "2026-10-06", "value_usd": 21500, "country": "India"}},
+  {"file": "edge_patient_data_sow.md", "meta": {"counterparty": "Lone Star Family Clinics (edge case: patient data)", "poc": "Dhaval", "deadline": "2026-10-09", "value_usd": 48000, "country": "USA"}},
+  {"file": "edge_forwarded_email_desert_pearl.eml", "meta": {"counterparty": "Desert Pearl Resorts (edge case: email intake)", "deadline": "2026-10-09", "value_usd": 66000, "country": "UAE"}},
+  {"file": "edge_disproportionate_liability.md", "meta": {"counterparty": "Meadowbrook Pet Supplies (edge case: $500k liability on $24k)", "poc": "Jay", "deadline": "2026-10-12", "value_usd": 24000, "country": "USA"}}
+]
