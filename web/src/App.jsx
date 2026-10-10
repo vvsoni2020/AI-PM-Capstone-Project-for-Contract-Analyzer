@@ -86,8 +86,17 @@ function Queue() {
   const [q, setQ] = useState(null);
   const [adding, setAdding] = useState(false);
   const [running, setRunning] = useState({});
+  const [autoLoading, setAutoLoading] = useState(false);
   const load = useCallback(() => api.data("queue").then(setQ).catch(onError), [onError]);
   useEffect(() => { load(); }, [load]);
+  // First start: the bundled AtliQ dataset loads itself once, so the queue is never empty in a demo.
+  useEffect(() => {
+    if (!q || autoLoading) return;
+    const isEmpty = !q.analysed.length && !q.waiting.length && !q.out_of_scope.length && !q.closed.length && !q.counts.signed_contracts;
+    if (!isEmpty) return;
+    setAutoLoading(true);
+    api.intake({ mode: "bundled" }).then((r) => { notify(`AtliQ dataset loaded (${r.added} files)`); load(); }).catch(onError);
+  }, [q, autoLoading, load, notify, onError]);
 
   const analyse = async (ids) => {
     const start = Date.now();
@@ -118,8 +127,8 @@ function Queue() {
       </div>
       {empty && (
         <div className="panel">
-          <h2>No contracts yet</h2>
-          <p>Load the AtliQ dataset (signed contracts, drafts, KD's checklist and notes) on the <a href="#/setup">Setup</a> page, or add a single contract.</p>
+          <h2>{autoLoading ? "Loading the AtliQ dataset…" : "No contracts yet"}</h2>
+          <p>The AtliQ dataset loads automatically on first start. You can also load it (signed contracts, drafts, KD's checklist and notes) on the <a href="#/setup">Setup</a> page, or add a single contract.</p>
         </div>
       )}
       {q.counts.signed_contracts > 0 && q.analysed.length + q.waiting.length > 0 && (

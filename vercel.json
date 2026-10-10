@@ -6,7 +6,7 @@
   "functions": {
     "api/review.py": { "maxDuration": 300 },
     "api/extract.py": { "maxDuration": 300 },
-    "api/intake.py": { "maxDuration": 60 },
+    "api/intake.py": { "maxDuration": 60, "includeFiles": "dataset/**" },
     "api/data.js": { "maxDuration": 30 },
     "api/action.js": { "maxDuration": 30 }
   }

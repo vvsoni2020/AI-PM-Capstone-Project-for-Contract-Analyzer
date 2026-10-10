@@ -26,6 +26,15 @@ export default function Setup() {
     } catch (e) { onError(e); } finally { setBusy(""); }
   };
 
+  const importBundled = async () => {
+    setBusy("Loading the AtliQ dataset");
+    try {
+      const r = await api.intake({ mode: "bundled" });
+      notify(`Dataset loaded: ${r.added} added, ${r.updated} updated`);
+      load();
+    } catch (e) { onError(e); } finally { setBusy(""); }
+  };
+
   const importSamples = async () => {
     setBusy("Adding the edge-case test contracts");
     try {
@@ -47,13 +56,14 @@ export default function Setup() {
       <div className="stack">
         <section className="panel">
           <h2>1. Load the AtliQ dataset</h2>
-          <p>Choose the <b>Dataset</b> folder. ACA reads the signed contracts, incoming drafts, KD's checklist, the negotiation notes, the meeting notes, the entity sheet and the tracker (for POC, deadline and value). Loading again updates files with the same name.</p>
-          {busy ? <Spinner label={busy} /> : (
-            <label className="btn primary" style={{ display: "inline-block" }}>
-              Choose the Dataset folder
+          <p>The synthetic AtliQ dataset ships with the app and loads automatically the first time the queue opens. Use these buttons to load it again, or to load your own copy of the folder. ACA reads the signed contracts, incoming drafts, KD's checklist, the negotiation notes, the meeting notes, the entity sheet and the tracker (for POC, deadline and value). Loading again updates files with the same name.</p>
+          {busy ? <Spinner label={busy} /> : (<>
+            <button className="btn primary" onClick={importBundled} style={{ marginRight: 8 }}>Load the included dataset</button>
+            <label className="btn" style={{ display: "inline-block" }}>
+              Choose a Dataset folder
               <input type="file" webkitdirectory="" directory="" multiple onChange={(e) => importFolder(e.target.files)} style={{ display: "none" }} />
             </label>
-          )}
+          </>)}
           <p className="small muted" style={{ marginTop: 8 }}>Files with “key” or “secret” in the name are skipped.</p>
         </section>
         <section className="panel">

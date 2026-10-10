@@ -86,6 +86,7 @@ uncapped exposure → rest) → top 3 + full list + checks run → queue rank
 The Python and Node code calls Claude and Supabase over plain HTTPS using only the standard library, so there is nothing to install.
 
 ```
+dataset/         the synthetic AtliQ dataset (loaded on first start)
 public/          index.html, styles.css, app.js (built), samples/ (edge-case test contracts)
 web/src/         React source (bundled with esbuild by dev/build_web.sh)
 api/             Vercel functions: data.js, action.js (Node) · intake.py, review.py, extract.py (Python)
@@ -120,12 +121,12 @@ dev/             local dev server, dataset loader, helper scripts
 3. Click **Deploy**. Stay on the free Hobby plan.
 
 **3. Load the data in the app**
-1. Go to **Setup and costs → Choose the Dataset folder**. Pick the AtliQ `Dataset` folder.
+1. Open the app. The synthetic AtliQ dataset in [`dataset/`](dataset/) **loads automatically** the first time the queue opens. (**Setup and costs → Load the included dataset** reloads it; **Choose a Dataset folder** loads your own copy.)
 2. Go to **Commitments register →** extract from the 17 signed contracts (about 1 minute, about $0.70). As KD, confirm the entries.
 3. Go to **Contract queue → Analyse all**.
 4. Optional: **Setup → Add the edge-case contracts.**
 
-> The dataset is **not** in this repo, because the repo is public and the dataset is course material. It is loaded through the app and stored in Supabase.
+> The dataset is the course's **fully synthetic** AtliQ data (no real clients or contracts). It is included in [`dataset/`](dataset/) so the deployed app loads it on first start (decided 10 Oct).
 
 ## Run locally
 
@@ -133,7 +134,7 @@ Needs Node 20+ and Python 3.12+.
 
 ```bash
 export ANTHROPIC_API_KEY=...            # without Supabase variables, data is kept in ./.localdb (JSON)
-python3 dev/load_dataset.py /path/to/Dataset
+python3 dev/load_dataset.py dataset
 node dev/server.mjs 3000                # http://localhost:3000
 python3 -m unittest discover -s tests   # offline guardrail tests
 python3 tests/run_evals.py              # alpha test gate (uses the API, ~$3)

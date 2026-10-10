@@ -1,4 +1,6 @@
 """The three AI-side endpoints (Python): intake, review, register extraction."""
+import os
+
 from . import library, parsing
 from .db import get_db
 from .http import HttpError
@@ -8,6 +10,12 @@ from .review import run_review
 
 def intake(body, user):
     mode = body.get("mode")
+    if mode == "bundled":
+        # The synthetic AtliQ dataset ships with the app in /dataset (decided 10 Oct).
+        files = _bundled_files()
+        if not files:
+            raise HttpError(500, "Bundled dataset not found")
+        return library.import_files(files, actor=user, source="dataset (bundled)")
     if mode == "dataset":
         files = body.get("files") or []
         if not files:
@@ -20,7 +28,19 @@ def intake(body, user):
         except (parsing.ParseError, KeyError) as e:
             raise HttpError(400, str(e))
         return {"doc_id": doc["id"], "status": doc["status"], "scope": doc.get("scope")}
-    raise HttpError(400, "mode must be 'dataset' or 'upload'")
+    raise HttpError(400, "mode must be 'bundled', 'dataset' or 'upload'")
+
+
+def _bundled_files():
+    root = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dataset")
+    files = []
+    for dp, _, fns in os.walk(root):
+        for fn in sorted(fns):
+            if fn.endswith((".md", ".csv", ".txt")):
+                full = os.path.join(dp, fn)
+                with open(full, encoding="utf-8") as f:
+                    files.append({"path": os.path.relpath(full, root).replace(os.sep, "/"), "text": f.read()})
+    return files
 
 
 def review(body, user):
