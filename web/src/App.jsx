@@ -89,6 +89,10 @@ function Queue() {
   const [adding, setAdding] = useState(false);
   const [running, setRunning] = useState({});
   const [autoLoading, setAutoLoading] = useState(false);
+  const { user } = useApp();
+  const filterKey = `aca_queue_filter_${user}`;
+  const [mineOnly, setMineOnly] = useState(() => { try { return localStorage.getItem(filterKey) === "mine"; } catch { return false; } });
+  const setFilter = (mine) => { setMineOnly(mine); try { localStorage.setItem(filterKey, mine ? "mine" : "all"); } catch { /* storage unavailable */ } };
   const load = useCallback(() => api.data("queue").then(setQ).catch(onError), [onError]);
   useEffect(() => { load(); }, [load]);
   // First start: the bundled AtliQ dataset loads itself once, so the queue is never empty in a demo.
@@ -117,6 +121,13 @@ function Queue() {
   };
 
   if (!q) return <Spinner label="Loading the queue" />;
+  // "My contracts" = I am the POC, or KD asked me for feedback on it.
+  const isMine = (d) => d.poc === user || (d.feedback || []).some((f) => f.user === user);
+  const pick = (rows) => (mineOnly ? rows.filter(isMine) : rows);
+  const all = [...q.analysed, ...q.waiting, ...q.rejected, ...q.signed_history, ...q.out_of_scope];
+  const mineCount = all.filter(isMine).length;
+  const askedOfMe = [...q.analysed, ...q.waiting].filter((d) => (d.feedback || []).some((f) => f.user === user && !f.answered));
+  const v = { analysed: pick(q.analysed), waiting: pick(q.waiting), rejected: pick(q.rejected), signed_history: pick(q.signed_history), out_of_scope: pick(q.out_of_scope) };
   const empty = !q.analysed.length && !q.waiting.length && !q.out_of_scope.length && !q.rejected.length && !q.signed_history.length;
   return (
     <>
@@ -136,38 +147,50 @@ function Queue() {
       {q.counts.signed_contracts > 0 && q.analysed.length + q.waiting.length > 0 && (
         <p className="small muted">Checked against {q.counts.signed_contracts} signed contracts, KD's checklist and negotiation notes, and {q.counts.incidents} meeting notes.</p>
       )}
-      {q.waiting.length > 0 && (
+      <div className="risk-actions" role="group" aria-label="Show">
+        <button className={`btn small ${!mineOnly ? "primary" : ""}`} aria-pressed={!mineOnly} onClick={() => setFilter(false)}>All contracts ({all.length})</button>
+        <button className={`btn small ${mineOnly ? "primary" : ""}`} aria-pressed={mineOnly} onClick={() => setFilter(true)}>My contracts ({mineCount})</button>
+        <span className="small muted" style={{ alignSelf: "center" }}>My contracts = you are the POC, or KD asked you for feedback</span>
+      </div>
+      {askedOfMe.length > 0 && (
+        <div className="panel" style={{ marginTop: 12, borderColor: "var(--petrol)" }}>
+          <h3>Waiting for your feedback ({askedOfMe.length})</h3>
+          {askedOfMe.map((d) => <div key={d.id}><a href={`#/contract/${d.id}`}>{d.counterparty} – {d.doc_type}</a></div>)}
+        </div>
+      )}
+      {mineOnly && mineCount === 0 && <div className="panel" style={{ marginTop: 12 }}><p>No contracts where you are the POC or were asked for feedback.</p></div>}
+      {v.waiting.length > 0 && (
         <>
-          <div className="section-label"><h2>Waiting for analysis</h2><span className="muted small">{q.waiting.length}</span>
+          <div className="section-label"><h2>Waiting for analysis</h2><span className="muted small">{v.waiting.length}</span>
             <button className="btn small" style={{ marginLeft: "auto" }} disabled={Object.keys(running).length > 0}
-              onClick={() => analyse(q.waiting.map((d) => d.id))}>Analyse all {q.waiting.length}</button>
+              onClick={() => analyse(v.waiting.map((d) => d.id))}>Analyse all {v.waiting.length}</button>
           </div>
-          <QTable rows={q.waiting} running={running} onAnalyse={(id) => analyse([id])} />
+          <QTable rows={v.waiting} running={running} onAnalyse={(id) => analyse([id])} />
         </>
       )}
-      {q.analysed.length > 0 && (
+      {v.analysed.length > 0 && (
         <>
-          <div className="section-label"><h2>Analysed, ranked</h2><span className="muted small">{q.analysed.length}</span></div>
-          <QTable rows={q.analysed} ranked running={running} onAnalyse={(id) => analyse([id])} />
+          <div className="section-label"><h2>Analysed, ranked</h2><span className="muted small">{v.analysed.length}</span></div>
+          <QTable rows={v.analysed} ranked running={running} onAnalyse={(id) => analyse([id])} />
         </>
       )}
-      {q.rejected.length > 0 && (
+      {v.rejected.length > 0 && (
         <>
           <div className="section-label"><h2>Rejected</h2><span className="muted small">KD decided not to sign</span></div>
-          <QTable rows={q.rejected} />
+          <QTable rows={v.rejected} />
         </>
       )}
-      {q.signed_history.length > 0 && (
+      {v.signed_history.length > 0 && (
         <>
           <div className="section-label"><h2>Signed Contract History</h2>
-            <span className="muted small">{q.signed_history.length} signed · newest first · the commitments register is built from these</span></div>
-          <HistoryTable rows={q.signed_history} />
+            <span className="muted small">{v.signed_history.length} signed · newest first · the commitments register is built from these</span></div>
+          <HistoryTable rows={v.signed_history} />
         </>
       )}
-      {q.out_of_scope.length > 0 && (
+      {v.out_of_scope.length > 0 && (
         <>
           <div className="section-label"><h2>Out of scope – HR signs</h2><span className="muted small">Freelancer and employee contracts are not reviewed</span></div>
-          <QTable rows={q.out_of_scope} />
+          <QTable rows={v.out_of_scope} />
         </>
       )}
       {adding && <AddContract onClose={() => setAdding(false)} onAdded={(id) => { setAdding(false); window.location.hash = `#/contract/${id}`; }} />}
@@ -197,6 +220,12 @@ function QTable({ rows, ranked, running = {}, onAnalyse }) {
               <td>
                 <div className="cp">{d.counterparty}</div>
                 <div className="small muted">{d.doc_type}{d.side ? ` · AtliQ as ${d.side}` : ""}</div>
+                {(d.feedback || []).length > 0 && (
+                  <div style={{ marginTop: 4 }}>{d.feedback.map((f) => (
+                    <span key={f.user} className={`tag ${f.answered ? "petrol" : "check"}`} style={{ marginRight: 4 }}>
+                      Feedback: {f.user} {f.answered ? "✓ replied" : "· waiting"}
+                    </span>))}</div>
+                )}
               </td>
               <td>
                 {running[d.id] ? <Elapsed start={running[d.id]} hint="analysing" />

@@ -49,14 +49,25 @@ export async function getData(q, user) {
     const rejected = incoming.filter((d) => d.status === "Rejected");
     const history = await signedHistory(db, docs);
     const outOfScope = incoming.filter((d) => d.scope === "out");
-    const add = (d, i) => ({ ...d, rank: i, days_left: daysLeft(d.deadline) });
+    // Feedback KD asked for: who was asked, and whether they have commented since.
+    const comments = await db.select("comments", { columns: ["doc_id", "author", "kind", "to", "created_at"], order: "created_at" });
+    const feedback = {};
+    for (const c of comments) {
+      if (c.kind !== "feedback_request") continue;
+      for (const u of c.to || []) {
+        const answered = comments.some((x) => x.doc_id === c.doc_id && x.author === u && x.kind === "comment" && x.created_at > c.created_at);
+        (feedback[c.doc_id] ||= {})[u] = answered;
+      }
+    }
+    const add = (d, i) => ({ ...d, rank: i, days_left: daysLeft(d.deadline),
+      feedback: Object.entries(feedback[d.id] || {}).map(([u, answered]) => ({ user: u, answered })) });
     const counts = {
       signed_contracts: docs.filter((d) => d.role === "signed").length,
       policy: docs.filter((d) => d.role === "policy").length,
       incidents: docs.filter((d) => d.role === "incident").length,
     };
     return { today: TODAY, analysed: analysed.map((d, i) => add(d, i + 1)), waiting: waiting.map((d) => add(d, null)),
-      signed_history: history, rejected: rejected.map((d) => add(d, null)), out_of_scope: outOfScope.map((d) => add(d, null)), counts };
+      signed_history: history.map((d) => add(d, null)), rejected: rejected.map((d) => add(d, null)), out_of_scope: outOfScope.map((d) => add(d, null)), counts };
   }
   if (view === "doc") {
     const [doc] = await db.select("docs", { eq: { id: q.id } });
