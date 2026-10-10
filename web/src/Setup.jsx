@@ -39,14 +39,16 @@ export default function Setup() {
     setBusy("Adding the edge-case test contracts");
     try {
       const list = await (await fetch("/samples/index.json")).json();
-      let n = 0;
+      let n = 0, failed = 0;
       for (const s of list) {
-        const blob = await (await fetch(`/samples/${s.file}`)).blob();
-        const b64 = await new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob); });
-        await api.intake({ mode: "upload", filename: s.file, content_b64: b64, meta: s.meta || {} });
-        n += 1;
+        try {
+          const blob = await (await fetch(`/samples/${s.file}`)).blob();
+          const b64 = await new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob); });
+          await api.intake({ mode: "upload", filename: s.file, content_b64: b64, meta: s.meta || {} });
+          n += 1;
+        } catch { failed += 1; }
       }
-      notify(`${n} edge-case contracts added to the queue`);
+      notify(`${n} edge-case contracts added to the queue${failed ? ` (${failed} could not be added)` : ""}`);
     } catch (e) { onError(e); } finally { setBusy(""); }
   };
 

@@ -196,7 +196,19 @@ def run_rules(kt, doc, all_docs):
     signed_baa = [d for d in same_cp if d.get("role") == "signed" and (d.get("doc_type") == "BAA")]
     draft_baa = [d for d in same_cp if d.get("role") == "incoming" and d.get("doc_type") == "BAA"]
     signed_nda = [d for d in same_cp if d.get("role") == "signed" and d.get("doc_type") == "NDA"]
-    if is_health and cty == "United States" and (pdx.get("handles_phi") or kt.get("doc_type", "").upper() != "NDA"):
+    explicit_no_phi = pdx.get("handles_phi") is False and not doc.get("doc_type") == "BAA" and bool(pdx.get("quote"))
+    if is_health and cty == "United States" and explicit_no_phi:
+        # QA edge case B3 (10 Oct): the contract itself says only de-identified data is shared -> no BAA needed,
+        # but KD should know the condition it rests on. Low severity, never a top risk.
+        flags.append(_flag(
+            title="De-identified data only – no BAA needed while that holds", category="healthcare_bundle", topic="phi_baa",
+            severity="low", draft_clause_ref=pdx.get("ref", ""), draft_quote=pdx.get("quote", ""), source_doc=PRINCIPLES,
+            source_ref="KD's stated principles", source_quote="Healthcare project: sign the BAA first, including with freelancers and subcontractors, before any patient data moves.",
+            why_it_matters="The draft says no patient data (PHI) will be shared. If the scope ever changes to individual-level records, a signed BAA must come first.",
+            kd_position="Sign the BAA first, before any patient data moves.",
+            suggestion="Suggestion – KD decides: keep the no-PHI clause; require a BAA before any scope change that adds patient data."))
+        bundle.append({"document": "Business Associate Agreement (BAA)", "status": "not required – de-identified data only (confirm)", "required": False})
+    elif is_health and cty == "United States" and (pdx.get("handles_phi") or kt.get("doc_type", "").upper() != "NDA"):
         if not signed_baa:
             this_is_baa = doc.get("doc_type") == "BAA"
             status = "this BAA is still a draft" if this_is_baa else ("the BAA is a draft, NOT signed" if draft_baa or kt.get("baa_included") else "no BAA exists")

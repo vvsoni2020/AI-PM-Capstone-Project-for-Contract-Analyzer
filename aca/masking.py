@@ -34,6 +34,8 @@ ID_PATTERNS = [
     ("EIN", re.compile(r"\b\d{2}-\d{7}\b")),
     ("SWIFT", re.compile(r"(?<=SWIFT)(?:\s*(?:code|/BIC)?\s*[:.]?\s*)([A-Z]{6}[A-Z0-9]{2}(?:[A-Z0-9]{3})?)\b", re.I)),
     ("BANK_ACCOUNT", re.compile(r"(?:account|a/c)\s*(?:no\.?|number|#)\s*[:.]?\s*([0-9][0-9 -]{6,20}[0-9])", re.I)),
+    # US routing / ABA and UK sort codes (QA edge case D5, 10 Oct)
+    ("BANK_ROUTING", re.compile(r"(?:routing|ABA|sort\s+code)\s*(?:transit\s+)?(?:no\.?|number|code)?\s*[:.]?\s*([0-9][0-9 -]{4,12}[0-9])", re.I)),
     ("REG_ID", re.compile(
         r"(?:licen[cs]e\s+no\.?|commercial\s+registration\s+no\.?|registration\s+no\.?|CR\s+no\.?|HRB|VAT\s+ID|UEN|"
         r"company\s+number|tax\s+(?:id|registration)\s+(?:no\.?|number)?|TRN|NPI)\s*[:.]?\s*([A-Z]{0,3}\s?[0-9][0-9A-Z-]{3,})", re.I)),
