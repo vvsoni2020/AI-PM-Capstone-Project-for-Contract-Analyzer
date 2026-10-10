@@ -41,7 +41,7 @@ export default function App() {
     <Ctx.Provider value={ctx}>
       <header className="topbar">
         <div className="topbar-inner">
-          <a className="brand" href="#/"><b>ACA</b><span>Auto Contract Analyzer · AtliQ internal</span></a>
+          <a className="brand" href="#/"><b>Auto Contract Analyzer</b><span className="pill">ACA</span></a>
           <nav className="nav" aria-label="Main">
             <a href="#/" className={!route || route === "contract" || route === "invoice" ? "on" : ""}>Contract queue</a>
             <a href="#/register" className={route === "register" ? "on" : ""}>Commitments register</a>

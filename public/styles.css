@@ -8,9 +8,11 @@
   --line-2: #c9d0da;
   --paper: #f2f4f7;
   --surface: #ffffff;
-  --petrol: #14404a;
-  --petrol-2: #1f6f7a;
-  --petrol-wash: #e6f0f1;
+  /* Blue theme (10 Oct): header #2A64AD with a gold ACA badge */
+  --petrol: #1d3f6e;
+  --petrol-2: #2a64ad;
+  --petrol-wash: #e8eefb;
+  --gold: #f2b544;
   --highlight: #ffe9a3;
   --highlight-edge: #f1cf5c;
   --crit: #b42318;
@@ -43,17 +45,17 @@ p { margin: 0 0 .6em; }
 .nowrap { white-space: nowrap; }
 
 /* ---- top bar */
-.topbar { background: var(--petrol); color: #fff; }
-.topbar-inner { max-width: 1280px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; gap: 28px; min-height: 56px; flex-wrap: wrap; }
-.brand { display: flex; align-items: baseline; gap: 10px; color: #fff; text-decoration: none; }
-.brand b { font-size: 1.15rem; letter-spacing: .02em; }
-.brand span { font-size: .85rem; opacity: .75; }
+.topbar { background: #2a64ad; color: #fff; }
+.topbar-inner { max-width: 1280px; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; gap: 28px; min-height: 64px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; white-space: nowrap; }
+.brand b { font-size: 1.25rem; font-weight: 700; letter-spacing: .01em; }
+.brand .pill { background: var(--gold); color: #12305a; font-size: .85rem; font-weight: 800; padding: 2px 9px; border-radius: 999px; letter-spacing: .06em; }
 .nav { display: flex; gap: 4px; flex-wrap: wrap; }
-.nav a { color: #d7e6e8; text-decoration: none; padding: 6px 10px; border-radius: var(--r-sm); }
-.nav a.on { background: rgba(255,255,255,.14); color: #fff; }
+.nav a { color: #eef3fb; text-decoration: none; padding: 6px 10px; }
+.nav a.on { color: #fff; box-shadow: inset 0 -3px 0 var(--gold); }
 .nav a:hover { color: #fff; }
 .whoami { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: .88rem; }
-.whoami select { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.3); color: #fff; border-radius: var(--r-sm); padding: 4px 8px; }
+.whoami select { background: #fff; border: 0; color: var(--ink); border-radius: 6px; padding: 5px 8px; }
 .whoami select option { color: var(--ink); }
 
 .page { max-width: 1280px; margin: 0 auto; padding: 24px 20px 64px; }
