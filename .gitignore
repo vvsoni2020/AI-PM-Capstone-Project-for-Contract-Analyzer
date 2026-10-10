@@ -1,0 +1,8 @@
+.env
+.env.*
+*.key
+anthropic_key*
+node_modules/
+__pycache__/
+.vercel/
+dist/
