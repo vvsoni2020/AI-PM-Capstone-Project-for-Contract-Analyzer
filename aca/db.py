@@ -100,9 +100,10 @@ class SupabaseDB:
             url += "?" + urllib.parse.urlencode(params, safe="*,.()")
         headers = {
             "apikey": self.key,
-            "Authorization": "Bearer " + self.key,
             "Content-Type": "application/json",
         }
+        if not self.key.startswith("sb_"):  # legacy JWT keys also go in Authorization; new sb_ keys only in apikey
+            headers["Authorization"] = "Bearer " + self.key
         if prefer:
             headers["Prefer"] = prefer
         data = json.dumps(body).encode() if body is not None else None

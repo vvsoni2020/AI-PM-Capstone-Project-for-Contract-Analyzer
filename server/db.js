@@ -46,7 +46,7 @@ class SupabaseDB {
     const qs = new URLSearchParams(params).toString();
     const res = await fetch(this.base + t + (qs ? "?" + qs : ""), {
       method,
-      headers: { apikey: this.key, Authorization: `Bearer ${this.key}`, "Content-Type": "application/json", ...(prefer ? { Prefer: prefer } : {}) },
+      headers: { apikey: this.key, ...(this.key.startsWith("sb_") ? {} : { Authorization: `Bearer ${this.key}` }), "Content-Type": "application/json", ...(prefer ? { Prefer: prefer } : {}) },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     const text = await res.text();
