@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, session, USERS, USER_NAMES } from "./api.js";
-import { Ctx, Deadline, Elapsed, Modal, Sev, Spinner, Toast, CATEGORY_LABEL, useApp } from "./ui.jsx";
+import { Ctx, Deadline, Elapsed, Modal, Sev, Spinner, Toast, CATEGORY_LABEL, fmtDate, useApp } from "./ui.jsx";
 import Contract from "./Contract.jsx";
 import Register from "./Register.jsx";
 import Audit from "./Audit.jsx";
 import Setup from "./Setup.jsx";
+import Invoice from "./Invoice.jsx";
 
 function useHash() {
   const [hash, setHash] = useState(window.location.hash || "#/");
@@ -42,7 +43,7 @@ export default function App() {
         <div className="topbar-inner">
           <a className="brand" href="#/"><b>ACA</b><span>Auto Contract Analyzer · AtliQ internal</span></a>
           <nav className="nav" aria-label="Main">
-            <a href="#/" className={!route || route === "contract" ? "on" : ""}>Contract queue</a>
+            <a href="#/" className={!route || route === "contract" || route === "invoice" ? "on" : ""}>Contract queue</a>
             <a href="#/register" className={route === "register" ? "on" : ""}>Commitments register</a>
             <a href="#/audit" className={route === "audit" ? "on" : ""}>Audit log</a>
             <a href="#/setup" className={route === "setup" ? "on" : ""}>Setup and costs</a>
@@ -60,6 +61,7 @@ export default function App() {
           : route === "register" ? <Register key={user} />
           : route === "audit" ? <Audit />
           : route === "setup" ? <Setup />
+          : route === "invoice" && id ? <Invoice id={id} key={id} />
           : <Queue key={user} />}
       </main>
       <Toast toast={toast} />
@@ -92,7 +94,7 @@ function Queue() {
   // First start: the bundled AtliQ dataset loads itself once, so the queue is never empty in a demo.
   useEffect(() => {
     if (!q || autoLoading) return;
-    const isEmpty = !q.analysed.length && !q.waiting.length && !q.out_of_scope.length && !q.closed.length && !q.counts.signed_contracts;
+    const isEmpty = !q.analysed.length && !q.waiting.length && !q.out_of_scope.length && !q.rejected.length && !q.counts.signed_contracts;
     if (!isEmpty) return;
     setAutoLoading(true);
     api.intake({ mode: "bundled" }).then((r) => { notify(`AtliQ dataset loaded (${r.added} files)`); load(); }).catch(onError);
@@ -115,7 +117,7 @@ function Queue() {
   };
 
   if (!q) return <Spinner label="Loading the queue" />;
-  const empty = !q.analysed.length && !q.waiting.length && !q.out_of_scope.length && !q.closed.length;
+  const empty = !q.analysed.length && !q.waiting.length && !q.out_of_scope.length && !q.rejected.length && !q.signed_history.length;
   return (
     <>
       <div className="page-head">
@@ -149,7 +151,19 @@ function Queue() {
           <QTable rows={q.analysed} ranked running={running} onAnalyse={(id) => analyse([id])} />
         </>
       )}
-      {q.closed.length > 0 && (<><div className="section-label"><h2>Decided</h2></div><QTable rows={q.closed} /></>)}
+      {q.rejected.length > 0 && (
+        <>
+          <div className="section-label"><h2>Rejected</h2><span className="muted small">KD decided not to sign</span></div>
+          <QTable rows={q.rejected} />
+        </>
+      )}
+      {q.signed_history.length > 0 && (
+        <>
+          <div className="section-label"><h2>Signed Contract History</h2>
+            <span className="muted small">{q.signed_history.length} signed · newest first · the commitments register is built from these</span></div>
+          <HistoryTable rows={q.signed_history} />
+        </>
+      )}
       {q.out_of_scope.length > 0 && (
         <>
           <div className="section-label"><h2>Out of scope – HR signs</h2><span className="muted small">Freelancer and employee contracts are not reviewed</span></div>
@@ -197,6 +211,46 @@ function QTable({ rows, ranked, running = {}, onAnalyse }) {
               <td className="hide-sm">{d.poc || "–"}</td>
               <td className="nowrap"><Deadline d={d.deadline} days={d.days_left} /></td>
               <td className="hide-sm">{d.status}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+function HistoryTable({ rows }) {
+  const go = (id) => { window.location.hash = `#/contract/${id}`; };
+  return (
+    <div className="table-wrap">
+      <table className="qtable">
+        <thead>
+          <tr>
+            <th>Contract</th>
+            <th className="hide-sm">AtliQ role</th>
+            <th className="hide-sm">AtliQ entity (in contract)</th>
+            <th>Signed</th>
+            <th className="hide-sm">Expiry</th>
+            <th className="hide-sm">Register</th>
+            <th className="hide-sm">POC</th>
+            <th>Invoice</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((d) => (
+            <tr key={d.id} className="click" onClick={() => go(d.id)} tabIndex={0} onKeyDown={(e) => e.key === "Enter" && go(d.id)}>
+              <td>
+                <div className="cp">{d.counterparty}{d.via_aca && <span className="tag" style={{ marginLeft: 6 }}>via ACA</span>}</div>
+                <div className="small muted">{d.doc_type}{d.tracker_id ? ` · ${d.tracker_id}` : ""}</div>
+              </td>
+              <td className="hide-sm">{d.atliq_role}</td>
+              <td className="hide-sm">{d.contract_entity || <span className="muted">Not stated</span>}</td>
+              <td className="nowrap">{fmtDate(d.signed_on)}</td>
+              <td className="nowrap hide-sm">{d.expiry ? fmtDate(d.expiry) : <span className="muted">Not set</span>}</td>
+              <td className="hide-sm">{d.register_extracted_at ? `${d.register_entry_count || 0} entries` : <span className="muted">Not extracted</span>}</td>
+              <td className="hide-sm">{d.poc || "–"}</td>
+              <td className="nowrap">{d.billable
+                ? <a className="btn small" href={`#/invoice/${d.id}`} onClick={(e) => e.stopPropagation()}>Invoice setup</a>
+                : <span className="small muted">No fees</span>}</td>
             </tr>
           ))}
         </tbody>

@@ -15,7 +15,7 @@ def intake(body, user):
         files = _bundled_files()
         if not files:
             raise HttpError(500, "Bundled dataset not found")
-        return library.import_files(files, actor=user, source="dataset (bundled)")
+        return library.import_files(files, actor=user, source="dataset")
     if mode == "dataset":
         files = body.get("files") or []
         if not files:

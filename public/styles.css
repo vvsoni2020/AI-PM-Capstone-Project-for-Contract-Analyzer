@@ -218,3 +218,7 @@ details[open] > summary { margin-bottom: 10px; }
   .qtable .hide-sm { display: none; }
   .whoami { margin-left: 0; }
 }
+
+/* Invoice setup: print only the card */
+@media print { .topbar, .page-head .btn, .note { display: none !important; } .panel { border: none; } }
+.invoice hr { border: none; border-top: 1px solid var(--line); margin: 16px 0; }

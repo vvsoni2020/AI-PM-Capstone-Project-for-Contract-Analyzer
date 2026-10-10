@@ -40,13 +40,14 @@ export async function getData(q, user) {
   const view = q.view || "queue";
   if (view === "queue") {
     const docs = await db.select("docs", { columns: DOC_LIST_COLUMNS });
-    const incoming = docs.filter((d) => d.role === "incoming" || (d.role === "signed" && d.source !== "dataset"));
+    const incoming = docs.filter((d) => d.role === "incoming");
     const rank = (d) => [d.top_severity ? 0 : 1, SEV[d.top_severity] ?? 9, d.deadline ?? "9999", d.top_group ?? 9];
     const cmp = (a, b) => { const x = rank(a), y = rank(b); for (let i = 0; i < x.length; i++) { if (x[i] < y[i]) return -1; if (x[i] > y[i]) return 1; } return 0; };
     const open = incoming.filter((d) => d.scope !== "out" && !["Signed", "Rejected"].includes(d.status));
     const analysed = open.filter((d) => d.last_review_id).sort(cmp);
     const waiting = open.filter((d) => !d.last_review_id).sort((a, b) => (a.deadline ?? "9999").localeCompare(b.deadline ?? "9999"));
-    const closed = incoming.filter((d) => ["Signed", "Rejected"].includes(d.status));
+    const rejected = incoming.filter((d) => d.status === "Rejected");
+    const history = await signedHistory(db, docs);
     const outOfScope = incoming.filter((d) => d.scope === "out");
     const add = (d, i) => ({ ...d, rank: i, days_left: daysLeft(d.deadline) });
     const counts = {
@@ -55,7 +56,7 @@ export async function getData(q, user) {
       incidents: docs.filter((d) => d.role === "incident").length,
     };
     return { today: TODAY, analysed: analysed.map((d, i) => add(d, i + 1)), waiting: waiting.map((d) => add(d, null)),
-      closed: closed.map((d) => add(d, null)), out_of_scope: outOfScope.map((d) => add(d, null)), counts };
+      signed_history: history, rejected: rejected.map((d) => add(d, null)), out_of_scope: outOfScope.map((d) => add(d, null)), counts };
   }
   if (view === "doc") {
     const [doc] = await db.select("docs", { eq: { id: q.id } });
@@ -68,6 +69,14 @@ export async function getData(q, user) {
     const links = (doc.links || []).map((id) => all.find((d) => d.id === id)).filter(Boolean);
     return { doc: { ...doc, days_left: daysLeft(doc.deadline) }, review: reviews[0] || null, review_count: reviews.length,
       comments, flag_actions: flagActions, links };
+  }
+  if (view === "invoice") {
+    const [doc] = await db.select("docs", { eq: { id: q.id } });
+    if (!doc || doc.role !== "signed") throw new HttpError(404, "Signed contract not found");
+    const tracker = await trackerIndex(db);
+    const card = invoiceSetup(doc, tracker[doc.tracker_id] || {});
+    await audit(user, "invoice_setup_viewed", doc.id, { issuer: card.issuer?.short || null, warnings: card.warnings.length });
+    return card;
   }
   if (view === "outbound") {
     const [rev] = await db.select("reviews", { eq: { id: q.id }, columns: ["id", "doc_id", "outbound", "result"] });
@@ -175,4 +184,138 @@ export async function postAction(body, user) {
     return { ok: true };
   }
   throw new HttpError(400, `Unknown action ${t}`);
+}
+
+
+// ---------------- Signed Contract History + invoice setup (added 10 Oct) ----------------
+// AtliQ's two entities, from the finance fact sheet (dataset/atliq_entities.md).
+const ENTITIES = {
+  inc: {
+    short: "AtliQ Inc", name: "AtliQ Inc", type: "Delaware corporation (100% owned by AtliQ Technologies Pvt Ltd)",
+    address: "101 College Road East, Suite 210, Princeton, NJ 08540, USA",
+    ids: [["EIN", "88-4410273"]], tax: "US", currencies: ["USD"], signatory: "Karandeep (President)",
+  },
+  pvt: {
+    short: "AtliQ Technologies Pvt Ltd", name: "AtliQ Technologies Pvt Ltd", type: "Private limited company (India)",
+    address: "4th Floor, Baner Business Bay, Pune 411045, Maharashtra, India",
+    ids: [["CIN", "U72900MH2019PTC321456"], ["GSTIN", "27AAKCA4821F1Z3"]], tax: "GST (India)", currencies: ["INR", "USD", "EUR"],
+    signatory: "Karandeep (CEO)",
+  },
+};
+const ENTITY_RULE = "US clients are invoiced by AtliQ Inc; clients in every other region by AtliQ Technologies Pvt Ltd (atliq_entities.md; decided 10 Oct).";
+const isUS = (c) => /^(usa|us|united states)/i.test(String(c || "").trim());
+const EU = /germany|france|netherlands|spain|italy|ireland|europe/i;
+
+function parseCsv(text) {
+  const rows = []; let row = [], cell = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; } else if (ch === '"') q = false; else cell += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === ",") { row.push(cell); cell = ""; }
+    else if (ch === "\n") { row.push(cell.replace(/\r$/, "")); rows.push(row); row = []; cell = ""; }
+    else cell += ch;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  const [head, ...body] = rows;
+  return body.filter((r) => r.length > 1).map((r) => Object.fromEntries(head.map((h, i) => [h.trim(), (r[i] || "").trim()])));
+}
+
+async function trackerIndex(db) {
+  const [tr] = await db.select("docs", { eq: { role: "tracker" }, columns: ["id", "text"] });
+  if (!tr || !tr.text) return {};
+  return Object.fromEntries(parseCsv(tr.text).map((r) => [r.contract_id, r]));
+}
+
+function contractEntity(text, counterparty) {
+  if (/atliq/i.test(counterparty || "")) return "Both AtliQ entities (intercompany)";
+  const head = String(text || "").slice(0, 6000);
+  const inc = head.search(/AtliQ\s+Inc\b/i);
+  const pvt = head.search(/AtliQ\s+Technologies\s+(Pvt\.?\s*Ltd|Private\s+Limited)/i);
+  if (inc < 0 && pvt < 0) return null;
+  if (pvt < 0 || (inc >= 0 && inc < pvt)) return "AtliQ Inc";
+  return "AtliQ Technologies Pvt Ltd";
+}
+
+function atliqRole(d) {
+  const t = `${d.doc_type || ""} ${d.title || ""}`.toLowerCase();
+  if (/atliq/i.test(d.counterparty || "")) return "Intercompany";
+  if (/\bnda\b|non-disclosure|confidential/.test(t)) return "NDA party";
+  if (/contractor|subcontract|vendor|freelanc/.test(t)) return "Buyer";
+  if (/partner/.test(t)) return "Partner";
+  if (/waiver|consent/.test(t)) return "Supplier (waiver letter)";
+  return "Supplier";
+}
+
+async function signedHistory(db, docs) {
+  const signed = docs.filter((d) => d.role === "signed");
+  if (!signed.length) return [];
+  const tracker = await trackerIndex(db);
+  const texts = await db.select("docs", { eq: { role: "signed" }, columns: ["id", "text", "signed_date"] });
+  const byId = Object.fromEntries(texts.map((t) => [t.id, t]));
+  return signed.map((d) => {
+    const tr = tracker[d.tracker_id] || {};
+    const viaAca = Boolean(byId[d.id]?.signed_date);
+    const fileDate = (String(d.filename || "").match(/^(\d{4}-\d{2}-\d{2})/) || [])[1];
+    return {
+      ...d,
+      signed_on: byId[d.id]?.signed_date || tr.signed_date || fileDate || null,
+      expiry: tr.expiry_date || null,
+      contract_entity: contractEntity(byId[d.id]?.text, d.counterparty),
+      atliq_role: atliqRole(d),
+      billable: billableOf(d, atliqRole(d))[0],
+      via_aca: viaAca,
+    };
+  }).sort((a, b) => String(b.signed_on || "").localeCompare(String(a.signed_on || "")));
+}
+
+function paymentTerms(text) {
+  const t = String(text || "");
+  const re = /(\d{1,3})\s*\)?\s*(?:calendar\s+|business\s+)?days/gi;
+  let m;
+  while ((m = re.exec(t))) {
+    const win = t.slice(Math.max(0, m.index - 220), m.index + 60);
+    if (/invoice|payment|paid|payable/i.test(win)) {
+      const start = Math.max(0, t.lastIndexOf("\n", m.index) + 1);
+      const end = t.indexOf("\n", m.index);
+      return { days: Number(m[1]), quote: t.slice(start, end < 0 ? undefined : end).trim().slice(0, 400) };
+    }
+  }
+  return null;
+}
+
+function billableOf(doc, role) {
+  const t = `${doc.doc_type || ""} ${doc.title || ""}`.toLowerCase();
+  if (role === "Intercompany") return [false, "Intercompany agreement – handled through finance's intercompany process, not a client invoice."];
+  if (role === "Buyer") return [false, "AtliQ is the buyer here: the vendor invoices AtliQ, not the other way round."];
+  if (role === "NDA party" || /\bbaa\b|business associate|waiver|consent|settlement/.test(t))
+    return [false, "This document carries no fees, so there is nothing to invoice. Invoices follow the main services agreement."];
+  return [true, ""];
+}
+
+function invoiceSetup(doc, tr) {
+  const role = atliqRole(doc);
+  const country = doc.country || tr.client_country || null;
+  const issuerKey = isUS(country) ? "inc" : "pvt";
+  const issuer = ENTITIES[issuerKey];
+  const named = contractEntity(doc.text, doc.counterparty);
+  const [billable, reason] = billableOf(doc, role);
+  const warnings = [];
+  if (!country) warnings.push("Client country is not recorded – confirm it before choosing the invoicing entity.");
+  if (billable && named && !named.startsWith("Both") && named !== issuer.short)
+    warnings.push(`The contract names ${named} as the AtliQ party, but ${country} clients are invoiced by ${issuer.short}. Finance says entity mismatches delayed payments twice in 2025 – align the contract (amendment) or agree the invoicing entity with the client before the first invoice.`);
+  if (billable && !tr.atliq_entity) warnings.push("The tracker has no AtliQ entity for this contract – update the tracker.");
+  if (billable && !doc.value_usd) warnings.push("No contract value in the tracker – take amounts from the SOW / fee schedule.");
+  const currency = issuerKey === "inc" ? "USD" : /india/i.test(country || "") ? "INR" : EU.test(country || "") ? "EUR" : "USD";
+  return {
+    doc: { id: doc.id, counterparty: doc.counterparty, doc_type: doc.doc_type, title: doc.title, tracker_id: doc.tracker_id,
+      signed_on: doc.signed_date || tr.signed_date || null, expiry: tr.expiry_date || null, value_usd: doc.value_usd, country, poc: doc.poc },
+    atliq_role: role, billable, reason,
+    issuer: billable ? issuer : null, rule: ENTITY_RULE, contract_entity: named,
+    currency: billable ? currency : null,
+    payment_terms: billable ? paymentTerms(doc.text) : null,
+    bill_to: billable ? { name: doc.counterparty, country } : null,
+    warnings,
+    note: "Draft for finance. ACA never issues or sends invoices; finance raises the invoice in its own system. Bank details are not stored in ACA.",
+  };
 }

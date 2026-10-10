@@ -391,7 +391,7 @@ function Decision({ doc, reload }) {
       <h3>KD's decision</h3>
       {doc.status === "Signed" ? (
         <>
-          <p>Signed by KD outside ACA.</p>
+          <p>Signed by KD outside ACA. <a href={`#/invoice/${doc.id}`}>Invoice setup →</a></p>
           {doc.register_extracted_at
             ? <p className="small">{doc.register_entry_count} obligations extracted. <a href="#/register">Confirm them in the register</a>.</p>
             : extracting ? <Elapsed start={extracting} hint="extracting obligations" />
