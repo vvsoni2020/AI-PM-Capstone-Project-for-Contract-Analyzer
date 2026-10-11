@@ -6,6 +6,7 @@ import Contract from "./Contract.jsx";
 import Register from "./Register.jsx";
 import Audit from "./Audit.jsx";
 import Setup from "./Setup.jsx";
+import Pilot from "./Pilot.jsx";
 import { AcaBanner, KillSwitchButton } from "./KillSwitch.jsx";
 import Invoice from "./Invoice.jsx";
 
@@ -48,6 +49,7 @@ export default function App() {
             <a href="#/" className={!route || route === "contract" || route === "invoice" ? "on" : ""}>Contract queue</a>
             <a href="#/register" className={route === "register" ? "on" : ""}>Commitments register</a>
             <a href="#/audit" className={route === "audit" ? "on" : ""}>Audit log</a>
+            <a href="#/pilot" className={route === "pilot" ? "on" : ""}>Pilot metrics</a>
             <a href="#/setup" className={route === "setup" ? "on" : ""}>Setup and costs</a>
           </nav>
           <label className="whoami">
@@ -62,6 +64,7 @@ export default function App() {
         {route === "contract" && id ? <Contract id={id} key={id + user} />
           : route === "register" ? <Register key={user} />
           : route === "audit" ? <Audit />
+          : route === "pilot" ? <Pilot />
           : route === "setup" ? <Setup />
           : route === "invoice" && id ? <Invoice id={id} key={id} />
           : <Queue key={user} />}

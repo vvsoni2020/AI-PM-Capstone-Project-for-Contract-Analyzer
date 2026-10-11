@@ -125,7 +125,70 @@ export async function getData(q, user) {
       output_tokens: sum((r) => tok(r, "output_tokens")),
     };
   }
+  if (view === "pilot") return pilotMetrics(db);
   throw new HttpError(400, `Unknown view ${view}`);
+}
+
+// Pilot metrics, visible to everyone. Built from KD's flag clicks on the top-3 risks of each contract's latest analysis.
+// Precision = share of acted-on top-3 flags that are Useful or Dismissed (a real flag, handled or agreed).
+// Wrong rate = share of acted-on top-3 flags marked Wrong. A Restore clears an earlier click.
+// Targets are the PRD values and are not yet confirmed (see PRD §10–§12).
+export const PILOT_TARGETS = { precision: 0.8, wrong: 0.2 };
+const CATEGORY_NAME = {
+  commitment_conflict: "Collides with a signed contract", healthcare_bundle: "Healthcare paperwork", exposure: "Uncapped or disproportionate exposure",
+  clause_risk: "Against KD's positions", mutuality: "Not truly mutual", fairness: "Unfair to the other side", flowdown: "Client obligations not passed down",
+  entity_law: "Entity, law or invoicing", unusual_instruction: "Unusual instruction in the text",
+};
+
+async function pilotMetrics(db) {
+  const docs = (await db.select("docs", { columns: ["id", "counterparty", "role", "scope", "status", "last_review_id"] }))
+    .filter((d) => d.role === "incoming" && d.scope !== "out" && d.last_review_id);
+  const reviewIds = docs.map((d) => d.last_review_id);
+  const reviews = reviewIds.length ? await db.select("reviews", { columns: ["id", "doc_id", "result"] }) : [];
+  const latest = new Map(reviews.filter((r) => reviewIds.includes(r.id)).map((r) => [r.id, r]));
+  const docById = new Map(docs.map((d) => [d.id, d]));
+
+  // Every top-3 flag shown in a contract's latest analysis.
+  const shown = new Map();
+  for (const d of docs) {
+    const rev = latest.get(d.last_review_id);
+    for (const f of rev?.result?.top_risks || []) shown.set(`${d.last_review_id}|${f.id}`, { doc: d, flag: f });
+  }
+
+  // Latest click per flag in the latest analysis. A Restore clears it.
+  const actions = await db.select("flag_actions", { order: "created_at" });
+  const state = new Map();
+  for (const a of actions) {
+    const key = `${a.review_id}|${a.flag_id}`;
+    if (!shown.has(key)) continue;
+    if (a.action === "restore") state.delete(key); else state.set(key, a);
+  }
+
+  const counts = { useful: 0, dismiss: 0, wrong: 0 };
+  const byCategory = {};
+  const wrongList = [];
+  for (const [key, a] of state) {
+    counts[a.action] = (counts[a.action] || 0) + 1;
+    const { flag, doc } = shown.get(key);
+    const cat = flag.category || "other";
+    byCategory[cat] = byCategory[cat] || { label: CATEGORY_NAME[cat] || "Other", useful: 0, dismiss: 0, wrong: 0 };
+    byCategory[cat][a.action] = (byCategory[cat][a.action] || 0) + 1;
+    if (a.action === "wrong") wrongList.push({ at: a.created_at, counterparty: doc.counterparty, title: flag.title, reason: a.reason || "", by: a.actor });
+  }
+  const reviewed = counts.useful + counts.dismiss + counts.wrong;
+  const correct = counts.useful + counts.dismiss;
+  const pct = (n, d) => (d ? Number((n / d).toFixed(3)) : null);
+  return {
+    targets: PILOT_TARGETS,
+    precision: pct(correct, reviewed),
+    wrong_rate: pct(counts.wrong, reviewed),
+    reviewed,
+    shown: shown.size,
+    contracts: docs.length,
+    counts,
+    by_category: Object.values(byCategory).sort((x, y) => (y.useful + y.dismiss + y.wrong) - (x.useful + x.dismiss + x.wrong)),
+    wrong_flags: wrongList.sort((x, y) => String(y.at).localeCompare(String(x.at))).slice(0, 50),
+  };
 }
 
 const DECISION_STATUS = { sign: "Approved to sign", negotiate: "Negotiating", counsel: "With counsel", reject: "Rejected" };

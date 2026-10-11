@@ -229,3 +229,14 @@ details[open] > summary { margin-bottom: 10px; }
 ::highlight(abbr) { text-decoration: underline dotted; text-decoration-color: var(--petrol-2); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
 .abbr-tip { position: fixed; z-index: 1000; max-width: 340px; background: var(--petrol); color: #fff; font-size: 13px; line-height: 1.4; padding: 6px 10px; border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,.18); pointer-events: none; }
 @media print { .abbr-tip { display: none; } }
+
+/* Pilot metrics */
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 8px; }
+.metric { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--r); }
+.metric b { font-size: 1.8rem; font-weight: 600; }
+.metric b.ok { color: var(--ok, #2b7a4b); }
+.metric b.warn { color: var(--warn, #b42318); }
+.wronglist { list-style: none; margin: 0; padding: 0; }
+.wronglist li { padding: 10px 0; border-top: 1px solid var(--line); }
+.wronglist li:first-child { border-top: none; }
+@media (max-width: 720px) { .grid3 { grid-template-columns: 1fr; } }
