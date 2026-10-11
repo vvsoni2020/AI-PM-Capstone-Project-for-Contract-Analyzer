@@ -157,7 +157,7 @@ def run_rules(kt, doc, all_docs):
             why_it_matters=f"One incident could cost more than the whole deal{f' (${value:,.0f})' if value else ''}. KD walked away from Kessler (€120k) over exactly this.",
             kd_position="liability → 1x fees. NOT unlimited", past_exception="none",
             past_exception_note="Kessler Mobility (Jan 2026): KD refused unlimited liability and lost the deal rather than sign.",
-            suggestion="Suggestion – KD decides: cap liability at 1x fees (carve-outs only for fraud/wilful misconduct)."))
+            suggestion="Suggestion – KD decides: cap liability at 1x fees (carve-outs only for fraud/willful misconduct)."))
         checks.append({"check": "Liability ≤ 1x contract value", "result": "flag", "evidence": f"Uncapped ({lc.get('ref', '')})"})
     else:
         cap_usd = lc.get("cap_usd")

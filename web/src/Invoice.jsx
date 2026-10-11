@@ -44,7 +44,7 @@ export default function Invoice({ id }) {
               <div className="small">{c.issuer.type}</div>
               <div>{c.issuer.address}</div>
               {c.issuer.ids.map(([k, v]) => <div key={k}><b>{k}</b> {v}</div>)}
-              <div className="small muted" style={{ marginTop: 6 }}>Authorised signatory: {c.issuer.signatory}</div>
+              <div className="small muted" style={{ marginTop: 6 }}>Authorized signatory: {c.issuer.signatory}</div>
             </div>
             <div>
               <span className="small muted">BILL TO</span>

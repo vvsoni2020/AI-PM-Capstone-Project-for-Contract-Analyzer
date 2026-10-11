@@ -37,7 +37,7 @@ AtliQ's cyber insurance cover is USD 1M (Harrington huddle, 27 Sep 2026)."""
 
 ATLIQ_CYBER_COVER_USD = 1_000_000
 
-# AtliQ's own identifiers. They are masked with labelled tokens so the model knows WHICH entity
+# AtliQ's own identifiers. They are masked with labeled tokens so the model knows WHICH entity
 # an identifier belongs to without seeing the number.
 ATLIQ_IDS = {
     "U72900MH2019PTC321456": "ATLIQ_PVT_LTD_CIN",
@@ -56,13 +56,13 @@ REGULATIONS = [
     (["United States"], ["healthcare"], True, "HIPAA (Privacy, Security and Breach Notification Rules)",
      "Business Associate Agreement before any PHI is shared; subcontractor BAAs flowed down; breach notice duties"),
     (["United States"], ["financial services"], True, "Gramm-Leach-Bliley Act (GLBA) safeguards",
-     "Information-security programme and vendor oversight for customer financial data"),
+     "Information-security program and vendor oversight for customer financial data"),
     (["United States"], None, True, "US state privacy laws (e.g. CCPA/CPRA)",
      "Service-provider / processor terms if consumer personal data is processed"),
     (["India"], None, True, "Digital Personal Data Protection Act, 2023 (DPDP)",
      "Processor contract with the data fiduciary; security safeguards; breach reporting"),
     (["India"], ["financial services"], False, "RBI outsourcing / IT governance directions",
-     "Audit and inspection rights, data localisation and sub-contracting controls for regulated entities"),
+     "Audit and inspection rights, data localization and sub-contracting controls for regulated entities"),
     (["United Arab Emirates"], None, True, "UAE Federal Decree-Law No. 45 of 2021 (PDPL); DIFC/ADGM data law if in a free zone",
      "Processing terms; cross-border transfer conditions"),
     (["Saudi Arabia"], None, True, "Saudi Personal Data Protection Law (PDPL)",

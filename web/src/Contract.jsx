@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { api, USERS, USER_NAMES } from "./api.js";
-import { makeExpander } from "./glossary.js";
+import { makeExpander, usSpelling } from "./glossary.js";
 import { CATEGORY_LABEL, Deadline, Elapsed, fmtDate, fmtTime, Modal, money, Res, Sev, SOURCE_LABEL, Spinner, useApp } from "./ui.jsx";
 
 const ORIGIN = { rules: "Fixed rule", kd_positions: "KD's positions check", conflicts: "Commitments register check", fairness: "Fairness check" };
@@ -60,7 +60,7 @@ function Brief({ doc, review, actions, running, onAnalyse, reload }) {
     <div className="brief-head">
       <h2>Risk brief</h2>
       {running ? <Elapsed start={running} hint="masking, 4 checks in parallel, citation check – usually 20–45 s" />
-        : !outOfScope && <button className={`btn ${r ? "" : "primary"}`} onClick={onAnalyse}>{r ? "Analyse again" : "Analyse this contract"}</button>}
+        : !outOfScope && <button className={`btn ${r ? "" : "primary"}`} onClick={onAnalyse}>{r ? "Analyze again" : "Analyze this contract"}</button>}
     </div>
   );
   if (!r) {
@@ -68,7 +68,7 @@ function Brief({ doc, review, actions, running, onAnalyse, reload }) {
       <div className="panel">
         {head}
         {outOfScope ? <p>Out of scope – HR signs ({doc.scope_reason}). ACA does not review freelancer or employee contracts.</p>
-          : <p className="muted">Not analysed yet. ACA masks IDs and bank details, withholds any patient data, checks the draft against KD's positions, past incidents and every signed contract, and returns the top 3 risks with exact clause quotes.</p>}
+          : <p className="muted">Not analyzed yet. ACA masks IDs and bank details, withholds any patient data, checks the draft against KD's positions, past incidents and every signed contract, and returns the top 3 risks with exact clause quotes.</p>}
       </div>
     );
   }
@@ -89,7 +89,7 @@ function Brief({ doc, review, actions, running, onAnalyse, reload }) {
         {head}
         <p style={{ fontSize: "1.05rem" }}><b>{makeExpander()(r.headline)}</b></p>
         <p className="small muted">
-          Analysed {fmtTime(review.created_at)} by {review.actor} in {r.duration_s} s with {review.model} · {(r.usage || []).length} AI calls ·{" "}
+          Analyzed {fmtTime(review.created_at)} by {review.actor} in {r.duration_s} s with {review.model} · {(r.usage || []).length} AI calls ·{" "}
           {Number(r.total_tokens || 0).toLocaleString()} tokens · ${Number(r.total_cost_usd || 0).toFixed(3)}
         </p>
         {r.register_note && <p className="small muted">Commitments register: {r.register_note}</p>}
@@ -105,7 +105,7 @@ function Brief({ doc, review, actions, running, onAnalyse, reload }) {
         <details className="panel">
           <summary>Removed by the citation check ({r.removed_flags.length})</summary>
           <p className="small muted">These findings were dropped because a quote could not be found word for word in the contract or in the source it cited. No source, no flag.</p>
-          <ul className="small">{r.removed_flags.map((f, i) => <li key={i}><b>{f.title}</b> – {f.removed_reason}</li>)}</ul>
+          <ul className="small">{r.removed_flags.map((f, i) => <li key={i}><b>{usSpelling(f.title)}</b> – {f.removed_reason}</li>)}</ul>
         </details>
       )}
       <details className="panel">
@@ -137,7 +137,7 @@ function RiskCard({ f, doc, reviewId, act, reload, compact }) {
         <div className="risk-bar" />
         <div className="risk-body">
           <div className="risk-title-row">
-            <h3>{f.title}</h3>
+            <h3>{usSpelling(f.title)}</h3>
             <div className="risk-chips">
               <Sev s={f.severity} />
               {f.needs_kd_check && <span className="tag check">Needs KD check</span>}
@@ -160,7 +160,7 @@ function RiskCard({ f, doc, reviewId, act, reload, compact }) {
           <dl className="facts">
             <dt>Why it matters</dt><dd>{ex(f.why_it_matters)}</dd>
             {f.kd_position && <><dt>KD's position</dt><dd>{ex(f.kd_position)}</dd></>}
-            {f.past_exception && f.past_exception !== "none" && <><dt>History</dt><dd>{PAST[f.past_exception]}{f.past_exception_note ? `: ${f.past_exception_note}` : ""}</dd></>}
+            {f.past_exception && f.past_exception !== "none" && <><dt>History</dt><dd>{PAST[f.past_exception]}{f.past_exception_note ? `: ${usSpelling(f.past_exception_note)}` : ""}</dd></>}
             {f.needs_kd_check && f.uncertainty_note && <><dt>KD to confirm</dt><dd>{ex(f.uncertainty_note)}</dd></>}
           </dl>
           <div className="suggestion">{ex(f.suggestion)}</div>
@@ -208,7 +208,7 @@ function MoreFlags({ flags, doc, reviewId, actionFor, reload }) {
         {flags.map((f) => (
           <li key={f.id}>
             <button className="flagrow" onClick={() => setOpen(open === f.id ? null : f.id)} aria-expanded={open === f.id}>
-              <Sev s={f.severity} /><span className="t">{f.title}</span>
+              <Sev s={f.severity} /><span className="t">{usSpelling(f.title)}</span>
               {f.needs_kd_check && <span className="tag check">Needs KD check</span>}
               <span className="small muted hide-sm">{f.draft_clause_ref}</span>
             </button>

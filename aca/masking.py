@@ -2,7 +2,7 @@
 
 1. Patient / personal data lines are WITHHELD entirely (never sent, not even masked).
 2. IDs, bank details, addresses, emails and phone numbers are MASKED with tokens like [GSTIN_1].
-   AtliQ's own identifiers get labelled tokens ([ATLIQ_PVT_LTD_GSTIN]) so the model can still
+   AtliQ's own identifiers get labeled tokens ([ATLIQ_PVT_LTD_GSTIN]) so the model can still
    reason about WHICH entity is named without seeing the number.
 3. Party names, people's names and commercial figures are NOT masked (decided 7 Oct).
 
@@ -78,7 +78,7 @@ class Masker:
 
     def _sub_group(self, kind, pattern, text):
         def repl(m):
-            if m.lastindex:  # mask only the captured value, keep the label ("licence no.")
+            if m.lastindex:  # mask only the captured value, keep the label ("license no." / "licence no.")
                 s, e = m.span(1)
                 ms, me = m.span(0)
                 whole = m.group(0)
@@ -117,7 +117,7 @@ class Masker:
             else:
                 kept.append(line)
         text = "\n".join(kept)
-        # AtliQ's own IDs first, so they get labelled tokens
+        # AtliQ's own IDs first, so they get labeled tokens
         for value in ATLIQ_IDS:
             if value in text:
                 text = text.replace(value, self._token("ATLIQ", value))

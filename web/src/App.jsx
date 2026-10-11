@@ -1,3 +1,4 @@
+import { usSpelling } from "./glossary.js";
 import { useCallback, useEffect, useState } from "react";
 import { api, session, USERS, USER_NAMES } from "./api.js";
 import { Ctx, Deadline, Elapsed, Modal, Sev, Spinner, Toast, CATEGORY_LABEL, fmtDate, useApp } from "./ui.jsx";
@@ -117,7 +118,7 @@ function Queue() {
       }
     };
     await Promise.all([worker(), worker(), worker()]);
-    notify(ids.length > 1 ? `${ids.length} contracts analysed` : "Analysis finished");
+    notify(ids.length > 1 ? `${ids.length} contracts analyzed` : "Analysis finished");
   };
 
   if (!q) return <Spinner label="Loading the queue" />;
@@ -163,14 +164,14 @@ function Queue() {
         <>
           <div className="section-label"><h2>Waiting for analysis</h2><span className="muted small">{v.waiting.length}</span>
             <button className="btn small" style={{ marginLeft: "auto" }} disabled={Object.keys(running).length > 0}
-              onClick={() => analyse(v.waiting.map((d) => d.id))}>Analyse all {v.waiting.length}</button>
+              onClick={() => analyse(v.waiting.map((d) => d.id))}>Analyze all {v.waiting.length}</button>
           </div>
           <QTable rows={v.waiting} running={running} onAnalyse={(id) => analyse([id])} />
         </>
       )}
       {v.analysed.length > 0 && (
         <>
-          <div className="section-label"><h2>Analysed, ranked</h2><span className="muted small">{v.analysed.length}</span></div>
+          <div className="section-label"><h2>Analyzed, ranked</h2><span className="muted small">{v.analysed.length}</span></div>
           <QTable rows={v.analysed} ranked running={running} onAnalyse={(id) => analyse([id])} />
         </>
       )}
@@ -228,14 +229,14 @@ function QTable({ rows, ranked, running = {}, onAnalyse }) {
                 )}
               </td>
               <td>
-                {running[d.id] ? <Elapsed start={running[d.id]} hint="analysing" />
+                {running[d.id] ? <Elapsed start={running[d.id]} hint="analyzing" />
                   : d.last_review_id ? (
                     <>
                       <Sev s={d.top_severity} /> {d.flag_count ? <span className="small muted">{d.flag_count} flag{d.flag_count > 1 ? "s" : ""}</span> : null}
-                      {(d.top_title || d.top_group) && <div className="risk-title">{d.top_title || CATEGORY_LABEL[groupCat(d.top_group)]}</div>}
+                      {(d.top_title || d.top_group) && <div className="risk-title">{usSpelling(d.top_title) || CATEGORY_LABEL[groupCat(d.top_group)]}</div>}
                     </>
                   ) : d.scope === "out" ? <span className="small muted">{d.scope_reason}</span>
-                  : onAnalyse ? <button className="btn small" onClick={(e) => { e.stopPropagation(); onAnalyse(d.id); }}>Analyse</button> : "–"}
+                  : onAnalyse ? <button className="btn small" onClick={(e) => { e.stopPropagation(); onAnalyse(d.id); }}>Analyze</button> : "–"}
               </td>
               <td className="hide-sm">{d.poc || "–"}</td>
               <td className="nowrap"><Deadline d={d.deadline} days={d.days_left} /></td>

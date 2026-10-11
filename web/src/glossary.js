@@ -22,7 +22,7 @@ export const GLOSSARY = {
   SCC: { full: "Standard Contractual Clauses", note: "EU-approved terms for moving personal data abroad", expand: true },
   // Contract terms
   LD: { full: "Liquidated Damages", note: "a fixed penalty for delay or breach", expand: true },
-  MFN: { full: "Most-Favoured-Nation", note: "a promise that no other customer gets a better price", expand: true },
+  MFN: { full: "Most-Favored-Nation", note: "a promise that no other customer gets a better price", expand: true },
   IP: { full: "Intellectual Property", expand: true },
   CGL: { full: "Commercial General Liability", note: "insurance", expand: true },
   FTE: { full: "Full-Time Equivalent", expand: true },
@@ -94,8 +94,9 @@ export function lookup(word) {
 // "Full form (ABBR)" on first use per card, for explanatory text only (never for contract quotes).
 export function makeExpander() {
   const seen = new Set();
-  return (text) => {
-    if (!text || typeof text !== "string") return text;
+  return (raw) => {
+    if (!raw || typeof raw !== "string") return raw;
+    const text = usSpelling(raw);
     const re = new RegExp(RE_SRC, "g");
     return text.replace(re, (m, abbr, s, offset) => {
       const g = GLOSSARY[abbr];
@@ -209,4 +210,26 @@ export function initAbbrTooltips(root) {
     const h = hitAt(e.clientX, e.clientY);
     if (h) show(h); else hide();
   });
+}
+
+// ---------- US English spelling for AI-written explanations ----------
+// New analyses are asked for US spelling in the prompt; this also fixes text stored before that.
+// Used only on explanatory fields (titles, why it matters, suggestions), never on contract quotes.
+const US = [
+  [/\b([Ll])icence(s?)\b/g, "$1icense$2"], [/\b([Ff])avour(s|ed|ing|able|ably|ite|ites)?\b/g, "$1avor$2"],
+  [/\b([Cc])olour(s|ed|ing)?\b/g, "$1olor$2"], [/\b([Bb])ehaviour(s)?\b/g, "$1ehavior$2"], [/\b([Ll])abour\b/g, "$1abor"],
+  [/\b([Hh])onour(s|ed|ing)?\b/g, "$1onor$2"], [/\b([Nn])eighbour(s|ing|hood)?\b/g, "$1eighbor$2"],
+  [/\b([Ll])abell(ed|ing)\b/g, "$1abel$2"], [/\b([Cc])ancell(ed|ing)\b/g, "$1ancel$2"], [/\b([Mm])odell(ed|ing)\b/g, "$1odel$2"],
+  [/\b([Tt])ravell(ed|ing|er|ers)\b/g, "$1ravel$2"], [/\b([Pp])rogramme(s?)\b/g, "$1rogram$2"], [/\b([Jj])udgement(s?)\b/g, "$1udgment$2"],
+  [/\b([Dd])efence\b/g, "$1efense"], [/\b([Oo])ffence(s?)\b/g, "$1ffense$2"], [/\b([Ww])ilful(ly)?\b/g, "$1illful$2"],
+  [/\b([Ww])hilst\b/g, "$1hile"], [/\bcentre(s?)\b/g, "center$1"], [/\b([Cc])atalogue(s?)\b/g, "$1atalog$2"],
+  [/\b([Aa])nalys(e|ed|ing)\b/g, (m, a, e) => `${a}nalyz${e}`],
+  [/\b([A-Za-z]+?)(is)(e|ed|es|ing|ation|ations)\b/g, (m, stem, is, end) => (US_IZE.has(stem.toLowerCase()) ? `${stem}iz${end}` : m)],
+];
+const US_IZE = new Set(["organ", "recogn", "priorit", "summar", "minim", "maxim", "util", "author", "categor", "standard", "real", "optim",
+  "visual", "final", "custom", "normal", "apolog", "emphas", "special", "character", "monet", "critic", "memor", "sanit", "local",
+  "capital", "legal", "central", "stabil", "neutral", "formal", "penal", "subsid", "fertil", "harmon", "jeopard", "anonym", "pseudonym", "digit"]);
+export function usSpelling(text) {
+  if (!text || typeof text !== "string") return text;
+  return US.reduce((t, [re, to]) => t.replace(re, to), text);
 }

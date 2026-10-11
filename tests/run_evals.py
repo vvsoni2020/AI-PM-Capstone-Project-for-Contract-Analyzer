@@ -1,7 +1,7 @@
 """Stage 1 alpha test gate (PRD §11 / §14): run ACA on every test case and check the expected result.
 
 Usage (needs ANTHROPIC_API_KEY, uses the local DB in ./.localdb):
-  python3 tests/run_evals.py              # analyse every case again, then score
+  python3 tests/run_evals.py              # analyze every case again, then score
   python3 tests/run_evals.py --use-latest # score the latest stored analysis of each case
 Writes tests/eval_report.md.
 """

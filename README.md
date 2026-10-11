@@ -20,7 +20,7 @@ It returns the **top 3 real risks, each with the exact clause quoted next to the
 | FR-1 Intake | Upload a contract (.docx, .md, .txt) **or a forwarded email (.eml)**. The attachment is taken from the email and the POC is read from the sender. |
 | FR-2 OCR | **Simulated.** The Orbit "scanned" contract in the dataset is already OCR text, including its OCR errors. PDF and image upload are not supported yet. |
 | FR-3 Scope | Freelancer and employee contracts are stopped with "Out of scope – HR signs". This is a fixed rule, not AI. |
-| FR-4 Privacy gate | IDs, bank details, addresses, emails and phone numbers are masked. AtliQ's own IDs get labelled tokens (e.g. `[ATLIQ_PVT_LTD_GSTIN]`). Patient-data lines are **withheld entirely**. A final leak check blocks the call if anything still looks like an ID. A **"What left AtliQ"** view shows the exact text sent. |
+| FR-4 Privacy gate | IDs, bank details, addresses, emails and phone numbers are masked. AtliQ's own IDs get labeled tokens (e.g. `[ATLIQ_PVT_LTD_GSTIN]`). Patient-data lines are **withheld entirely**. A final leak check blocks the call if anything still looks like an ID. A **"What left AtliQ"** view shows the exact text sent. |
 | FR-5 / FR-17 Commitments register | AI extracts non-competes, exclusivity, MFN pricing, IP handed over, no-hire, data-location limits and waivers from every signed contract. Each entry has its verified clause quote. **Only KD can confirm or reject an entry.** |
 | FR-6 Conflict check | Every draft is compared with the register, tuned for recall. Uncertain cases are marked "Needs KD check". |
 | FR-7 / FR-8 Rules (no AI) | Fixed rules check: entity vs client region, contracting vs invoicing entity, governing law and venue, uncapped liability and LD, liability above 1x contract value, BAA before patient data moves, insurance vs AtliQ's $1M cyber cover, and GDPR DPA. A fixed regulation list by country and sector is always worded "likely applies – confirm with counsel". |
@@ -135,7 +135,7 @@ dev/             local dev server, dataset loader, helper scripts
 **3. Load the data in the app**
 1. Open the app. The synthetic AtliQ dataset in [`dataset/`](dataset/) **loads automatically** the first time the queue opens. (**Setup and costs → Load the included dataset** reloads it; **Choose a Dataset folder** loads your own copy.)
 2. Go to **Commitments register →** extract from the 17 signed contracts (about 1 minute, about $0.70). As KD, confirm the entries.
-3. Go to **Contract queue → Analyse all**.
+3. Go to **Contract queue → Analyze all**.
 4. Optional: **Setup → Add the edge-case contracts.**
 
 > The dataset is the course's **fully synthetic** AtliQ data (no real clients or contracts). It is included in [`dataset/`](dataset/) so the deployed app loads it on first start (decided 10 Oct).

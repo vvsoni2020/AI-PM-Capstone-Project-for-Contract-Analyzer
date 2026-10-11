@@ -1,9 +1,10 @@
+import { usSpelling } from "./glossary.js";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "./api.js";
 import { Elapsed, fmtDate, Spinner, useApp } from "./ui.jsx";
 
 const TYPE = {
-  non_compete: "Non-compete", exclusivity: "Exclusivity", mfn_pricing: "Most-favoured pricing", ip_assignment: "IP handed over",
+  non_compete: "Non-compete", exclusivity: "Exclusivity", mfn_pricing: "Most-favored pricing", ip_assignment: "IP handed over",
   ip_licence_retained: "IP kept by someone else", no_hire: "No-hire / non-solicit", data_location: "Data location",
   subcontracting_limit: "Subcontracting limit", consent_or_waiver: "Consent or waiver", other_restriction: "Other restriction",
 };
@@ -81,15 +82,15 @@ export default function Register() {
                   {e.binds_affiliates && <span className="tag petrol">Binds Affiliates (both entities)</span>}
                   {e.needs_kd_check && <span className="tag check">KD to check</span>}
                 </div>
-                <p style={{ margin: "6px 0" }}>{e.summary}</p>
+                <p style={{ margin: "6px 0" }}>{usSpelling(e.summary)}</p>
                 <div className="small muted">
-                  {e.clause_ref} · {e.start_date ? fmtDate(e.start_date) : "?"} to {e.end_date ? fmtDate(e.end_date) : "no end date"}{e.end_rule ? ` (${e.end_rule})` : ""}
+                  {e.clause_ref} · {e.start_date ? fmtDate(e.start_date) : "?"} to {e.end_date ? fmtDate(e.end_date) : "no end date"}{e.end_rule ? ` (${usSpelling(e.end_rule)})` : ""}
                   {(e.regions || []).length > 0 && <> · {e.regions.join(", ")}</>}{(e.sectors || []).length > 0 && <> · {e.sectors.join(", ")}</>}
                 </div>
                 <details style={{ marginTop: 6 }}>
                   <summary className="small" style={{ fontWeight: 500 }}>Clause text {e.quote_verified ? <span className="verified">verified</span> : <span className="tag check">not verified</span>}</summary>
                   <blockquote className="quote"><mark>{e.quote}</mark></blockquote>
-                  {e.note && <p className="small muted">{e.note}</p>}
+                  {e.note && <p className="small muted">{usSpelling(e.note)}</p>}
                 </details>
                 {e.kd_note && <p className="small muted">KD: {e.kd_note}</p>}
               </div>

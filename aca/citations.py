@@ -1,7 +1,7 @@
 """Citation check (PRD §9.3 step 10): "no source, no flag".
 
 A quote counts as verified when every fragment of it (fragments are separated by "...") is found,
-in order, in the source text after light normalisation (markdown, quotes, dashes, whitespace,
+in order, in the source text after light normalization (markdown, quotes, dashes, whitespace,
 case). A small tolerance (90% of a fragment as one exact run) absorbs OCR noise and
 punctuation slips without letting invented text through.
 """
