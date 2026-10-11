@@ -4,6 +4,7 @@ import os
 from . import library, parsing
 from .db import get_db
 from .http import HttpError
+from .killswitch import aca_enabled
 from .register import extract_for_doc
 from .review import run_review
 
@@ -44,6 +45,8 @@ def _bundled_files():
 
 
 def review(body, user):
+    if not aca_enabled():
+        raise HttpError(423, "ACA is switched off by KD. Review this contract manually.")
     doc_id = body.get("doc_id")
     if not doc_id or not get_db().select("docs", eq={"id": doc_id}):
         raise HttpError(404, "Contract not found")
@@ -53,6 +56,8 @@ def review(body, user):
 
 
 def extract(body, user):
+    if not aca_enabled():
+        raise HttpError(423, "ACA is switched off by KD. Review this contract manually.")
     doc_id = body.get("doc_id")
     rows = get_db().select("docs", eq={"id": doc_id}) if doc_id else []
     if not rows or rows[0].get("role") != "signed":

@@ -6,6 +6,7 @@ import Contract from "./Contract.jsx";
 import Register from "./Register.jsx";
 import Audit from "./Audit.jsx";
 import Setup from "./Setup.jsx";
+import { AcaBanner, KillSwitchButton } from "./KillSwitch.jsx";
 import Invoice from "./Invoice.jsx";
 
 function useHash() {
@@ -106,6 +107,7 @@ function Queue() {
   }, [q, autoLoading, load, notify, onError]);
 
   const analyse = async (ids) => {
+    if (q && q.aca_enabled === false) return notify("ACA is stopped by KD. Review these contracts manually.", true);
     const start = Date.now();
     setRunning((r) => ({ ...r, ...Object.fromEntries(ids.map((i) => [i, start])) }));
     const pool = [...ids];
@@ -130,14 +132,19 @@ function Queue() {
   const askedOfMe = [...q.analysed, ...q.waiting].filter((d) => (d.feedback || []).some((f) => f.user === user && !f.answered));
   const v = { analysed: pick(q.analysed), waiting: pick(q.waiting), rejected: pick(q.rejected), signed_history: pick(q.signed_history), out_of_scope: pick(q.out_of_scope) };
   const empty = !q.analysed.length && !q.waiting.length && !q.out_of_scope.length && !q.rejected.length && !q.signed_history.length;
+  const acaOn = q.aca_enabled !== false;
   return (
     <>
+      <AcaBanner enabled={acaOn} />
       <div className="page-head">
         <div>
           <h1>Contract queue</h1>
           <p>Every client and partner contract waiting for KD, most serious risk first, then nearest deadline. Dataset date: {q.today}.</p>
         </div>
-        <button className="btn primary" onClick={() => setAdding(true)}>Add a contract</button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <KillSwitchButton enabled={acaOn} onChanged={load} />
+          <button className="btn primary" onClick={() => setAdding(true)}>Add a contract</button>
+        </div>
       </div>
       {empty && (
         <div className="panel">
@@ -163,16 +170,16 @@ function Queue() {
       {v.waiting.length > 0 && (
         <>
           <div className="section-label"><h2>Waiting for analysis</h2><span className="muted small">{v.waiting.length}</span>
-            <button className="btn small" style={{ marginLeft: "auto" }} disabled={Object.keys(running).length > 0}
+            <button className="btn small" style={{ marginLeft: "auto" }} disabled={!acaOn || Object.keys(running).length > 0}
               onClick={() => analyse(v.waiting.map((d) => d.id))}>Analyze all {v.waiting.length}</button>
           </div>
-          <QTable rows={v.waiting} running={running} onAnalyse={(id) => analyse([id])} />
+          <QTable rows={v.waiting} running={running} enabled={acaOn} onAnalyse={(id) => analyse([id])} />
         </>
       )}
       {v.analysed.length > 0 && (
         <>
           <div className="section-label"><h2>Analyzed, ranked</h2><span className="muted small">{v.analysed.length}</span></div>
-          <QTable rows={v.analysed} ranked running={running} onAnalyse={(id) => analyse([id])} />
+          <QTable rows={v.analysed} ranked running={running} enabled={acaOn} onAnalyse={(id) => analyse([id])} />
         </>
       )}
       {v.rejected.length > 0 && (
@@ -199,7 +206,7 @@ function Queue() {
   );
 }
 
-function QTable({ rows, ranked, running = {}, onAnalyse }) {
+function QTable({ rows, ranked, running = {}, enabled = true, onAnalyse }) {
   const go = (id) => { window.location.hash = `#/contract/${id}`; };
   return (
     <div className="table-wrap">
@@ -229,7 +236,8 @@ function QTable({ rows, ranked, running = {}, onAnalyse }) {
                 )}
               </td>
               <td>
-                {running[d.id] ? <Elapsed start={running[d.id]} hint="analyzing" />
+                {!enabled && d.scope !== "out" ? <span className="sev critical" style={{ background: "#fde7e5", color: "#b42318" }}>ACA Disabled</span>
+                : running[d.id] ? <Elapsed start={running[d.id]} hint="analyzing" />
                   : d.last_review_id ? (
                     <>
                       <Sev s={d.top_severity} /> {d.flag_count ? <span className="small muted">{d.flag_count} flag{d.flag_count > 1 ? "s" : ""}</span> : null}

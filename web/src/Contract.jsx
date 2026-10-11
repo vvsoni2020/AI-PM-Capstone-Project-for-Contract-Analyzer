@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { api, USERS, USER_NAMES } from "./api.js";
 import { usSpelling } from "./glossary.js";
+import { MANUAL_CHECKS } from "./KillSwitch.jsx";
 import { CATEGORY_LABEL, Deadline, Elapsed, fmtDate, fmtTime, Modal, money, Res, Sev, SOURCE_LABEL, Spinner, useApp } from "./ui.jsx";
 
 const ORIGIN = { rules: "Fixed rule", kd_positions: "KD's positions check", conflicts: "Commitments register check", fairness: "Fairness check" };
@@ -37,7 +38,7 @@ export default function Contract({ id }) {
       </div>
       <div className="cgrid">
         <div className="stack">
-          <Brief doc={doc} review={review} actions={data.flag_actions} running={running} onAnalyse={analyse} reload={load} />
+          <Brief doc={doc} review={review} actions={data.flag_actions} running={running} enabled={data.aca_enabled !== false} onAnalyse={analyse} reload={load} />
           <details className="panel">
             <summary>Full contract text</summary>
             <div className="contract-text">{doc.text}</div>
@@ -45,7 +46,7 @@ export default function Contract({ id }) {
         </div>
         <aside className="rail stack">
           <DealFacts doc={doc} links={data.links} reload={load} />
-          <Decision doc={doc} reload={load} />
+          <Decision doc={doc} reload={load} enabled={data.aca_enabled !== false} />
           <Feedback doc={doc} comments={data.comments} reload={load} />
         </aside>
       </div>
@@ -53,7 +54,17 @@ export default function Contract({ id }) {
   );
 }
 
-function Brief({ doc, review, actions, running, onAnalyse, reload }) {
+function Brief({ doc, review, actions, running, enabled = true, onAnalyse, reload }) {
+  if (!enabled) {
+    return (
+      <div className="panel" style={{ borderColor: "#b42318" }}>
+        <div className="brief-head"><h2>Risk brief</h2></div>
+        <p><b style={{ color: "#b42318" }}>ACA Disabled.</b> KD has stopped ACA, so this contract is not sent to ACA. The POC reviews it by hand against:</p>
+        <ul className="small">{MANUAL_CHECKS.map((c) => <li key={c}>{c}</li>)}</ul>
+        {review && <p className="small muted">The last ACA analysis is hidden while ACA is stopped.</p>}
+      </div>
+    );
+  }
   const r = review?.result;
   const outOfScope = doc.scope === "out";
   const head = (
@@ -371,7 +382,7 @@ function DealFacts({ doc, links, reload }) {
   );
 }
 
-function Decision({ doc, reload }) {
+function Decision({ doc, reload, enabled = true }) {
   const { isKD, onError, notify } = useApp();
   const [note, setNote] = useState("");
   const [confirm, setConfirm] = useState(false);
@@ -396,7 +407,8 @@ function Decision({ doc, reload }) {
           {doc.register_extracted_at
             ? <p className="small">{doc.register_entry_count} obligations extracted. <a href="#/register">Confirm them in the register</a>.</p>
             : extracting ? <Elapsed start={extracting} hint="extracting obligations" />
-              : <button className="btn primary" onClick={extract}>Extract new obligations for the register</button>}
+              : enabled ? <button className="btn primary" onClick={extract}>Extract new obligations for the register</button>
+                : <p className="small muted">ACA is stopped by KD. Extract obligations when ACA is started again.</p>}
         </>
       ) : isKD ? (
         <>

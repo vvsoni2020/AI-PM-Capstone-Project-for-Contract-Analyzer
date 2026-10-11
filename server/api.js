@@ -35,6 +35,12 @@ function daysLeft(deadline) {
   return Math.round((Date.parse(deadline) - Date.parse(TODAY)) / 86400000);
 }
 
+// Kill switch state: the latest audit row with action "kill_switch". No row = ACA on.
+async function acaEnabled(db) {
+  const [last] = await db.select("audit_log", { eq: { action: "kill_switch" }, order: "id", desc: true, limit: 1 });
+  return !last || last.details?.enabled !== false;
+}
+
 export async function getData(q, user) {
   const db = getDb();
   const view = q.view || "queue";
@@ -66,7 +72,7 @@ export async function getData(q, user) {
       policy: docs.filter((d) => d.role === "policy").length,
       incidents: docs.filter((d) => d.role === "incident").length,
     };
-    return { today: TODAY, analysed: analysed.map((d, i) => add(d, i + 1)), waiting: waiting.map((d) => add(d, null)),
+    return { today: TODAY, aca_enabled: await acaEnabled(db), analysed: analysed.map((d, i) => add(d, i + 1)), waiting: waiting.map((d) => add(d, null)),
       signed_history: history.map((d) => add(d, null)), rejected: rejected.map((d) => add(d, null)), out_of_scope: outOfScope.map((d) => add(d, null)), counts };
   }
   if (view === "doc") {
@@ -79,7 +85,7 @@ export async function getData(q, user) {
     const all = await db.select("docs", { columns: ["id", "filename", "counterparty", "doc_type", "role", "status"] });
     const links = (doc.links || []).map((id) => all.find((d) => d.id === id)).filter(Boolean);
     return { doc: { ...doc, days_left: daysLeft(doc.deadline) }, review: reviews[0] || null, review_count: reviews.length,
-      comments, flag_actions: flagActions, links };
+      comments, flag_actions: flagActions, links, aca_enabled: await acaEnabled(db) };
   }
   if (view === "invoice") {
     const [doc] = await db.select("docs", { eq: { id: q.id } });
@@ -184,6 +190,13 @@ export async function postAction(body, user) {
     await db.update("register", { id: e.id }, { status, confirmed_by: user, confirmed_at: nowIso(), kd_note: body.note || "" });
     await audit(user, `register_${status}`, e.source_doc_id, { entry_id: e.id, type: e.type, summary: e.summary, note: body.note || "" });
     return { ok: true, status };
+  }
+  if (t === "kill_switch") {
+    // KD only. Stop: no contract is sent to ACA until KD starts it again. Logged in the audit log.
+    requireKD(user, "stop or start ACA");
+    if (typeof body.enabled !== "boolean") throw new HttpError(400, "enabled must be true or false");
+    await audit(user, "kill_switch", null, { enabled: body.enabled, note: String(body.note || "").slice(0, 300) });
+    return { ok: true, aca_enabled: body.enabled };
   }
   if (t === "set_meta") {
     const doc = await needDoc();
