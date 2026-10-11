@@ -9,6 +9,9 @@ KD, AtliQ's CEO, reviews and signs every client and partner contract himself, la
 
 It returns the **top 3 real risks, each with the exact clause quoted next to the clause it collides with**, in under a minute. Sensitive data is masked before anything leaves AtliQ. **ACA never signs or sends anything. KD decides and signs.**
 
+🎥 **[Watch the 5-minute demo video](https://www.loom.com/share/04c06fc1a08043f5967d48c1e8d29fed)** (Deliverable #7)
+🚀 **[Try the live prototype](https://ai-pm-capstone-project-for-contract.vercel.app)**
+
 > Author: Vaibhav Soni (AI PM) · Built on the synthetic AtliQ dataset · PRD: *3_AI_PRD_ACA_V1.0* · Cost model: *4_Cost_Estimation_ACA_V1.0*
 
 ---
@@ -47,16 +50,6 @@ It returns the **top 3 real risks, each with the exact clause quoted next to the
 | Prompt-injection attempts that changed the result | **0 / 3** |
 | Latency | 4–46 s per contract (target < 5 min) |
 | Cost | $0.08–0.28 per contract (cost estimate Median: $0.16) |
-
-Clause-risk precision (≥ 80%) is measured on the **Pilot metrics** tab from KD's Useful, Dismissed and Mark wrong clicks on the top-3 flags (Useful and Dismissed count as correct; Mark wrong counts against the wrong-rate target of ≤ 20%).
-
----|---|
-| Brief's test cases + edge cases | **19 / 19 expected results** |
-| Conflict recall: Gulf Crown, BlueOrchid and TravelHub vs Al Noor; Datavane vs CloudSpan; Lakeshore vs Crestline MFN; Rheinwerk vs Northwind PipeKit | **6 / 6** |
-| Groundedness | Every flag shown has a verified quote. Unverifiable findings are removed and listed ("no source, no flag"). |
-| Privacy: unmasked IDs or patient data in outbound calls | **0** |
-| Latency | ~20–45 s per contract (target < 5 min) |
-| Cost | ~$0.12–0.29 per contract, average ~$0.21 (cost estimate Median: $0.16) |
 
 Clause-risk precision (≥ 80%) is measured on the **Pilot metrics** tab from KD's Useful, Dismissed and Mark wrong clicks on the top-3 flags (Useful and Dismissed count as correct; Mark wrong counts against the wrong-rate target of ≤ 20%).
 
