@@ -275,7 +275,7 @@ function HistoryTable({ rows }) {
               <td className="hide-sm">{d.contract_entity || <span className="muted">Not stated</span>}</td>
               <td className="nowrap">{fmtDate(d.signed_on)}</td>
               <td className="nowrap hide-sm">{d.expiry ? fmtDate(d.expiry) : <span className="muted">Not set</span>}</td>
-              <td className="hide-sm">{d.register_extracted_at ? `${d.register_entry_count || 0} entries` : <span className="muted">Not extracted</span>}</td>
+              <td className="hide-sm nowrap">{d.register_extracted_at ? `${d.register_entry_count || 0} ${d.register_entry_count === 1 ? "entry" : "entries"}` : <span className="muted">Not extracted</span>}</td>
               <td className="hide-sm">{d.poc || "–"}</td>
               <td className="nowrap">{d.billable
                 ? <a className="btn small" href={`#/invoice/${d.id}`} onClick={(e) => e.stopPropagation()}>Invoice setup</a>
