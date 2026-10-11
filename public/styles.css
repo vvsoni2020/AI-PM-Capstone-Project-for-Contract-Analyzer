@@ -224,3 +224,8 @@ details[open] > summary { margin-bottom: 10px; }
 /* Invoice setup: print only the card */
 @media print { .topbar, .page-head .btn, .note { display: none !important; } .panel { border: none; } }
 .invoice hr { border: none; border-top: 1px solid var(--line); margin: 16px 0; }
+
+/* Abbreviation glossary: dotted underline + hover/tap tooltip (web/src/glossary.js) */
+::highlight(abbr) { text-decoration: underline dotted; text-decoration-color: var(--petrol-2); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+.abbr-tip { position: fixed; z-index: 1000; max-width: 340px; background: var(--petrol); color: #fff; font-size: 13px; line-height: 1.4; padding: 6px 10px; border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,.18); pointer-events: none; }
+@media print { .abbr-tip { display: none; } }

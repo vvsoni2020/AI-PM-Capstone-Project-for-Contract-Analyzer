@@ -30,6 +30,7 @@ It returns the **top 3 real risks, each with the exact clause quoted next to the
 | FR-13 Queue | All contracts ranked by most serious flag, then nearest deadline, with POC, deadline and status. |
 | FR-14 – FR-16 | Comments; KD asks named people for feedback; KD records a decision (sign / negotiate / counsel / reject); KD marks a flag useful, dismissed or wrong (a reason is required). |
 | FR-15 Signing | Only KD can **record** that he signed the contract himself, outside ACA. There is no e-signature or send code anywhere. |
+| Glossary | Every abbreviation (BAA, PHI, MSA, LD, GCC and about 60 more) gets a dotted underline and a hover or tap tooltip with its full form, including in AI-written text. In each risk card the first use is written out as "Business Associate Agreement (BAA)". Contract quotes stay word for word. |
 | FR-18 Audit log | Every upload, analysis, outbound call, flag decision, register change and signing record is logged. In Supabase a database trigger blocks any edit or delete. |
 
 ### Stage 1 alpha test result
