@@ -1,9 +1,8 @@
-// Abbreviation glossary (added 10 Oct, Vaibhav's rule: "full form (ABBR)", hover where space is tight).
-// 1. initAbbrTooltips(): every glossary abbreviation anywhere in the app gets a dotted underline and a
-//    hover (or tap) tooltip with its full form. It works on AI-written text too, and never edits the DOM
-//    React owns: the underline uses the CSS Custom Highlight API and the tooltip is a separate element.
-// 2. makeExpander(): in roomy explanatory text (why it matters, KD's position, suggestion) the first use
-//    of an abbreviation in each card is written out as "Full form (ABBR)".
+// Abbreviation glossary (Vaibhav's rule, 10 Oct, final): hover only in the app, never inline text.
+// Each regulatory or contract abbreviation gets a dotted underline and a hover/tap tooltip with its
+// full form on its FIRST use on a page only. Later uses stay plain. KD is not a glossary term:
+// it is written as "Karandeep" in headings and as "KD" in body text.
+// The underline uses the CSS Custom Highlight API, so React's DOM is never edited.
 
 export const GLOSSARY = {
   ACA: { full: "Auto Contract Analyzer", note: "this app" },
@@ -80,6 +79,8 @@ export const GLOSSARY = {
   MQTT: { full: "Message Queuing Telemetry Transport", note: "a device messaging protocol" },
 };
 
+// Names and labels that never get a tooltip.
+const NO_TIP = new Set(["KD", "HR"]);
 const KEYS = Object.keys(GLOSSARY).sort((a, b) => b.length - a.length);
 // Whole word, optional plural "s" (NDAs, SOWs). Case-sensitive so ordinary words never match.
 const RE_SRC = `(?<![A-Za-z0-9])(${KEYS.join("|")})(s?)(?![A-Za-z0-9])`;
@@ -89,26 +90,6 @@ export function lookup(word) {
   if (GLOSSARY[word]) return { abbr: word, plural: false, ...GLOSSARY[word] };
   if (word.endsWith("s") && GLOSSARY[word.slice(0, -1)]) return { abbr: word.slice(0, -1), plural: true, ...GLOSSARY[word.slice(0, -1)] };
   return null;
-}
-
-// "Full form (ABBR)" on first use per card, for explanatory text only (never for contract quotes).
-export function makeExpander() {
-  const seen = new Set();
-  return (raw) => {
-    if (!raw || typeof raw !== "string") return raw;
-    const text = usSpelling(raw);
-    const re = new RegExp(RE_SRC, "g");
-    return text.replace(re, (m, abbr, s, offset) => {
-      const g = GLOSSARY[abbr];
-      if (!g.expand || seen.has(abbr)) return m;
-      seen.add(abbr);
-      // Already written out somewhere in this text, e.g. "Business Associate Agreement (BAA)".
-      if (text.toLowerCase().includes(g.full.toLowerCase())) return m;
-      // Inside brackets, e.g. "patient data (HIPAA)": write "(Health Insurance ... Act, HIPAA)".
-      if (text[offset - 1] === "(" && text[offset + m.length] === ")") return `${g.full}, ${m}`;
-      return `${g.full}${s && !g.full.endsWith("s") ? "s" : ""} (${m})`;
-    });
-  };
 }
 
 export function tooltipText(hit) {
@@ -125,7 +106,8 @@ export function initAbbrTooltips(root) {
   tip.hidden = true;
   document.body.appendChild(tip);
 
-  // Dotted underline on every match (no DOM changes, so React is unaffected).
+  // Dotted underline on the first use of each term on the page (no DOM changes, so React is unaffected).
+  const firsts = [];
   const canHighlight = typeof CSS !== "undefined" && CSS.highlights && typeof Highlight !== "undefined";
   let pending = null;
   const SKIP = new Set(["SCRIPT", "STYLE", "TEXTAREA", "INPUT", "SELECT", "OPTION"]);
@@ -133,6 +115,8 @@ export function initAbbrTooltips(root) {
     pending = null;
     if (!canHighlight) return;
     const ranges = [];
+    firsts.length = 0;
+    const seen = new Set();
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode: (n) => (n.parentElement && !SKIP.has(n.parentElement.tagName) && /[A-Z]{2}/.test(n.data) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT),
     });
@@ -141,10 +125,14 @@ export function initAbbrTooltips(root) {
       re.lastIndex = 0;
       let m;
       while ((m = re.exec(n.data))) {
+        const key = m[1];
+        if (seen.has(key) || NO_TIP.has(key)) continue; // first use on the page only
+        seen.add(key);
         const r = new Range();
         r.setStart(n, m.index);
         r.setEnd(n, m.index + m[0].length);
         ranges.push(r);
+        firsts.push({ node: n, start: m.index });
       }
     }
     CSS.highlights.set("abbr", new Highlight(...ranges));
@@ -169,7 +157,8 @@ export function initAbbrTooltips(root) {
     while (a > 0 && /[A-Za-z0-9]/.test(t[a - 1])) a--;
     while (b < t.length && /[A-Za-z0-9]/.test(t[b])) b++;
     const hit = lookup(t.slice(a, b));
-    if (!hit) return null;
+    if (!hit || NO_TIP.has(hit.abbr)) return null;
+    if (canHighlight && !firsts.some((f) => f.node === node && f.start === a)) return null; // later uses: no tooltip
     const r = new Range();
     r.setStart(node, a); r.setEnd(node, b);
     const rect = [...r.getClientRects()].find((q) => x >= q.left - 1 && x <= q.right + 1 && y >= q.top - 1 && y <= q.bottom + 1);
@@ -204,7 +193,7 @@ export function initAbbrTooltips(root) {
   });
   root.addEventListener("mouseleave", hide);
   window.addEventListener("scroll", hide, { passive: true });
-  // Touch screens have no hover: a tap on an abbreviation shows its full form.
+  // Touch screens have no hover: a tap on the first use of an abbreviation shows its full form.
   root.addEventListener("click", (e) => {
     if (e.pointerType === "mouse") return;
     const h = hitAt(e.clientX, e.clientY);

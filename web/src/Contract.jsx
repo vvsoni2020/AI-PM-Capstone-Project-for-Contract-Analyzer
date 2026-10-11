@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from "react";
 import { api, USERS, USER_NAMES } from "./api.js";
-import { makeExpander, usSpelling } from "./glossary.js";
+import { usSpelling } from "./glossary.js";
 import { CATEGORY_LABEL, Deadline, Elapsed, fmtDate, fmtTime, Modal, money, Res, Sev, SOURCE_LABEL, Spinner, useApp } from "./ui.jsx";
 
 const ORIGIN = { rules: "Fixed rule", kd_positions: "KD's positions check", conflicts: "Commitments register check", fairness: "Fairness check" };
@@ -87,7 +87,7 @@ function Brief({ doc, review, actions, running, onAnalyse, reload }) {
     <>
       <div className={`panel ${r.state === "clean" ? "state-clean" : ""}`}>
         {head}
-        <p style={{ fontSize: "1.05rem" }}><b>{makeExpander()(r.headline)}</b></p>
+        <p style={{ fontSize: "1.05rem" }}><b>{usSpelling(r.headline)}</b></p>
         <p className="small muted">
           Analyzed {fmtTime(review.created_at)} by {review.actor} in {r.duration_s} s with {review.model} · {(r.usage || []).length} AI calls ·{" "}
           {Number(r.total_tokens || 0).toLocaleString()} tokens · ${Number(r.total_cost_usd || 0).toFixed(3)}
@@ -129,8 +129,6 @@ function RiskCard({ f, doc, reviewId, act, reload, compact }) {
     } catch (e) { onError(e); }
   };
   const hasSource = f.source_quote && f.source_quote.trim();
-  // First use of each abbreviation in this card is written out; quotes stay verbatim.
-  const ex = makeExpander();
   return (
     <article className={`risk ${f.severity} ${state === "dismiss" || state === "wrong" ? "dismissed" : ""}`} aria-label={f.title}>
       <div className="risk-top">
@@ -158,12 +156,12 @@ function RiskCard({ f, doc, reviewId, act, reload, compact }) {
             )}
           </div>
           <dl className="facts">
-            <dt>Why it matters</dt><dd>{ex(f.why_it_matters)}</dd>
-            {f.kd_position && <><dt>KD's position</dt><dd>{ex(f.kd_position)}</dd></>}
+            <dt>Why it matters</dt><dd>{usSpelling(f.why_it_matters)}</dd>
+            {f.kd_position && <><dt>KD's position</dt><dd>{usSpelling(f.kd_position)}</dd></>}
             {f.past_exception && f.past_exception !== "none" && <><dt>History</dt><dd>{PAST[f.past_exception]}{f.past_exception_note ? `: ${usSpelling(f.past_exception_note)}` : ""}</dd></>}
-            {f.needs_kd_check && f.uncertainty_note && <><dt>KD to confirm</dt><dd>{ex(f.uncertainty_note)}</dd></>}
+            {f.needs_kd_check && f.uncertainty_note && <><dt>KD to confirm</dt><dd>{usSpelling(f.uncertainty_note)}</dd></>}
           </dl>
-          <div className="suggestion">{ex(f.suggestion)}</div>
+          <div className="suggestion">{usSpelling(f.suggestion)}</div>
           {f.also_flagged_by?.length > 0 && (
             <details className="also">
               <summary>Also found by {f.also_flagged_by.length} other check{f.also_flagged_by.length > 1 ? "s" : ""}</summary>
@@ -391,7 +389,7 @@ function Decision({ doc, reload }) {
   if (doc.scope === "out") return null;
   return (
     <div className="panel">
-      <h3>KD's decision</h3>
+      <h3>Karandeep's decision</h3>
       {doc.status === "Signed" ? (
         <>
           <p>Signed by KD outside ACA. <a href={`#/invoice/${doc.id}`}>Invoice setup →</a></p>
